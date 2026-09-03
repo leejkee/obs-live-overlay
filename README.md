@@ -30,4 +30,12 @@ npm start        # 运行已构建版本
 
 当前 MVP 提供 ID 入队、当前观众出队、“不排了”提示开关，以及一行可编辑的 Overlay 消息。消息显示在“等候队列”下方，清空后自动隐藏；“不排了”开关仅控制提示，不会禁止继续添加 ID。编辑队列项、单独删除、清空队列及调序暂未实现。同一个 ID 不能重复排队。
 
-队列状态仅保存在服务内存中：刷新浏览器或 OBS 不会丢失，停止服务后会清空。
+## Profile 与持久化
+
+Queue 控制页支持新建、切换、重命名和删除 Profile。`default` Profile 始终保留且不能删除；每个 Profile 独立保存队列、消息和“不排了”状态。切换当前 Profile 后，现有 `/overlay/queue` 页面会自动加载对应状态，OBS 地址无需改变。
+
+数据以 JSON 格式原子写入 `data/profiles.json`。该运行时数据文件不会提交到 Git；停止并重新启动 Service 后会自动恢复。
+
+如需自定义数据文件位置，可在启动前设置 `OBS_OVERLAY_DATA_FILE` 环境变量。
+
+刷新浏览器、OBS 或重启 Service 后，Profile 与队列状态都会从 JSON 文件恢复。

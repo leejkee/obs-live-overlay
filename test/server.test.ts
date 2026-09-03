@@ -1,14 +1,20 @@
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
 import type { AddressInfo } from "node:net";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import WebSocket from "ws";
 import { createOverlayServer } from "../src/server.js";
 
 describe("Overlay Service", () => {
-  const app = createOverlayServer();
+  let app: Awaited<ReturnType<typeof createOverlayServer>>;
+  let temporaryDirectory = "";
   let baseUrl = "";
 
   before(async () => {
+    temporaryDirectory = await mkdtemp(join(tmpdir(), "obs-live-overlay-server-"));
+    app = await createOverlayServer({ dataFile: join(temporaryDirectory, "profiles.json") });
     await new Promise<void>((resolve) => app.server.listen(0, "127.0.0.1", resolve));
     const address = app.server.address() as AddressInfo;
     baseUrl = `http://127.0.0.1:${address.port}`;
@@ -17,6 +23,7 @@ describe("Overlay Service", () => {
   after(async () => {
     for (const client of app.sockets.clients) client.terminate();
     await new Promise<void>((resolve, reject) => app.server.close((error) => error ? reject(error) : resolve()));
+    await rm(temporaryDirectory, { recursive: true, force: true });
   });
 
   it("提供控制台和 Overlay 页面", async () => {
@@ -108,6 +115,38 @@ describe("Overlay Service", () => {
     const message = JSON.parse(await broadcastPromise);
     assert.equal(message.state.message, "欢迎加入");
     socket.close();
+  });
+
+  it("创建、重命名、切换和删除 Profile", async () => {
+    const createdResponse = await fetch(`${baseUrl}/api/profiles`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: "周末场" }),
+    });
+    assert.equal(createdResponse.status, 201);
+    const created = await createdResponse.json();
+    const profileId = created.activeProfileId;
+    assert.notEqual(profileId, "default");
+    assert.equal(created.profile.name, "周末场");
+    assert.deepEqual(created.state.items, []);
+
+    const renamedResponse = await fetch(`${baseUrl}/api/profiles/${profileId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: "周日场" }),
+    });
+    assert.equal((await renamedResponse.json()).profile.name, "周日场");
+
+    const activatedResponse = await fetch(`${baseUrl}/api/profiles/active`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ profileId: "default" }),
+    });
+    assert.equal((await activatedResponse.json()).activeProfileId, "default");
+
+    const deletedResponse = await fetch(`${baseUrl}/api/profiles/${profileId}`, { method: "DELETE" });
+    assert.equal(deletedResponse.status, 200);
+    assert.equal((await deletedResponse.json()).profiles.length, 1);
   });
 });
 
