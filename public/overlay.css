@@ -1,0 +1,59 @@
+:root {
+  color-scheme: dark;
+  font-family: Inter, "Segoe UI", "Microsoft YaHei", sans-serif;
+  color: #fff;
+  background: transparent;
+  font-synthesis: none;
+  --text-outline: #050505;
+  --current-accent: #ff7a00;
+}
+
+* { box-sizing: border-box; }
+html, body { width: 100%; min-height: 100%; margin: 0; overflow: hidden; background: transparent !important; }
+body { padding: 6px; }
+.overlay { width: min(440px, calc(100vw - 12px)); padding: 2px; border: 0; background: transparent; }
+
+.title-area { padding-bottom: 4px; border-bottom: 2px solid #fff; }
+.overlay-message { margin: 3px 4px 0; overflow-wrap: anywhere; font-size: 22px; font-weight: 800; line-height: 1.12; }
+.overlay-message[hidden] { display: none; }
+.queue-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 38px; padding: 0 4px; }
+h1 { margin: 0; font-size: 30px; line-height: 1; letter-spacing: -.03em; }
+.stopped-banner { display: inline-block; flex: none; padding: 2px 6px; font-size: 20px; font-weight: 900; line-height: 1.1; border: 2px solid #ff5366; border-radius: 3px; background: transparent; animation: reveal .16s ease both; }
+.stopped-banner[hidden] { display: none; }
+
+.queue-list { position: relative; list-style: none; margin: 3px 0 0; padding: 0; }
+.queue-item { display: grid; grid-template-columns: 31px minmax(0, 1fr) auto; align-items: center; gap: 8px; min-height: 36px; margin: 1px 0; padding: 3px 5px 3px 2px; border: 1px solid transparent; border-bottom-color: rgba(255,255,255,.55); border-radius: 3px; background: transparent; will-change: transform, opacity; }
+.queue-item.current { margin: 2px 0; border: 3px solid var(--current-accent); padding: 2px 3px 2px 0; background: transparent; }
+.queue-position { text-align: center; font-size: 15px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+.queue-name { overflow: hidden; font-size: 24px; font-weight: 750; line-height: 1.12; letter-spacing: 0; text-overflow: ellipsis; white-space: nowrap; }
+.current-label { display: none; padding: 0 3px; font-size: 16px; font-weight: 900; line-height: 1.1; white-space: nowrap; }
+.queue-item.current .current-label { display: inline-block; }
+
+h1,
+.overlay-message,
+.stopped-banner,
+.queue-position,
+.queue-name,
+.current-label,
+.empty-message,
+.connection-status {
+  color: #fff;
+  -webkit-text-stroke: 1px var(--text-outline);
+  paint-order: stroke fill;
+  text-shadow: -1px -1px 0 var(--text-outline), 1px -1px 0 var(--text-outline), -1px 1px 0 var(--text-outline), 1px 1px 0 var(--text-outline);
+}
+
+.queue-item.entering { animation: enter .18s ease-out both; }
+.queue-item.leaving { position: absolute; left: 0; z-index: 2; width: 100%; pointer-events: none; animation: leave .18s ease-in both; }
+.empty-message { padding: 10px 2px 6px; text-align: left; font-size: 17px; font-weight: 700; line-height: 1.15; animation: reveal .16s ease both; }
+.empty-message[hidden] { display: none; }
+.connection-status { max-height: 0; overflow: hidden; font-size: 14px; font-weight: 700; line-height: 1.1; opacity: 0; transition: max-height .16s ease, opacity .16s ease, margin .16s ease; }
+.connection-status.visible { max-height: 24px; margin-top: 3px; opacity: 1; }
+
+@keyframes enter { from { opacity: 0; transform: translateX(-5px); } }
+@keyframes leave { to { opacity: 0; transform: translateX(5px); } }
+@keyframes reveal { from { opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}

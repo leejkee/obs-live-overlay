@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>等候队列 Overlay</title>
+    <link rel="stylesheet" href="/overlay.css" />
+  </head>
+  <body>
+    <main class="overlay" aria-live="polite">
+      <div class="title-area">
+        <header class="queue-header">
+          <h1>等候队列</h1>
+          <span id="stopped-banner" class="stopped-banner" hidden>不排了</span>
+        </header>
+        <div id="overlay-message" class="overlay-message" hidden></div>
+      </div>
+      <div id="empty-message" class="empty-message">等待第一位观众加入</div>
+      <ol id="queue-list" class="queue-list"></ol>
+      <div id="connection-status" class="connection-status">正在连接服务…</div>
+    </main>
+    <script type="module" src="/overlay.js"></script>
+  </body>
+</html>
