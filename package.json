@@ -18,8 +18,9 @@
     "start": "node dist/cli.js",
     "prepack": "npm run build",
     "pack:local": "npm pack",
-    "test": "tsx --test test/**/*.test.ts",
-    "check": "tsc -p tsconfig.json --noEmit"
+    "test": "tsx --test test/*.test.ts",
+    "check": "tsc -p tsconfig.json --noEmit",
+    "verify": "npm run check && npm test && npm run build"
   },
   "dependencies": {
     "ws": "^8.18.3"

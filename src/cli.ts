@@ -15,9 +15,12 @@ export interface CliOptions {
 const packageDirectory = dirname(dirname(fileURLToPath(import.meta.url)));
 const packageJson = JSON.parse(readFileSync(join(packageDirectory, "package.json"), "utf8")) as { version: string };
 
-export function defaultDataFile(environment: NodeJS.ProcessEnv = process.env): string {
+export function defaultDataFile(
+  environment: NodeJS.ProcessEnv = process.env,
+  platform: NodeJS.Platform = process.platform,
+): string {
   const baseDirectory = environment.XDG_DATA_HOME
-    || (process.platform === "win32" ? environment.LOCALAPPDATA : undefined)
+    || (platform === "win32" ? environment.LOCALAPPDATA : undefined)
     || join(homedir(), ".local", "share");
   return join(baseDirectory || homedir(), "obs-live-overlay", "profiles.json");
 }
