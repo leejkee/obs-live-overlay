@@ -63,7 +63,7 @@ jobs:
             cd release
             sha256sum "${package_name}" > "${package_name}.sha256"
           )
-          npm install --global "release/${package_name}" --prefix "${RUNNER_TEMP}/obs-live-overlay-smoke"
+          npm install --global "./release/${package_name}" --prefix "${RUNNER_TEMP}/obs-live-overlay-smoke"
           actual_version="$("${RUNNER_TEMP}/obs-live-overlay-smoke/bin/obs-live-overlay" --version)"
           test "${actual_version}" = "${package_version}"
 
