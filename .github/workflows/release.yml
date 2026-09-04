@@ -55,7 +55,7 @@ jobs:
         shell: bash
         run: |
           package_version="$(node --print "require('./package.json').version")"
-          package_name="obs-live-overlay-${package_version}.tgz"
+          package_name="leejkee-obs-live-overlay-${package_version}.tgz"
           mkdir release
           npm pack --pack-destination release
           test -f "release/${package_name}"
@@ -75,8 +75,8 @@ jobs:
           package_version="$(node --print "require('./package.json').version")"
           release_args=(
             "${GITHUB_REF_NAME}"
-            "release/obs-live-overlay-${package_version}.tgz"
-            "release/obs-live-overlay-${package_version}.tgz.sha256"
+            "release/leejkee-obs-live-overlay-${package_version}.tgz"
+            "release/leejkee-obs-live-overlay-${package_version}.tgz.sha256"
             --verify-tag
             --generate-notes
             --title "${GITHUB_REF_NAME}"

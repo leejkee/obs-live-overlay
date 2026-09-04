@@ -18,14 +18,20 @@ npm run dev
 - 控制台：<http://127.0.0.1:3000/control>
 - OBS Browser Source：<http://127.0.0.1:3000/overlay/queue>
 
-## 本地安装命令行
+## 安装命令行
 
-无需发布到 npm，也可以将项目打包并安装为全局命令：
+从 npm 全局安装：
+
+```bash
+npm install --global @leejkee/obs-live-overlay
+```
+
+也可以从源码打包并安装：
 
 ```bash
 npm install
 npm run pack:local
-npm install --global ./obs-live-overlay-0.1.0.tgz
+npm install --global ./leejkee-obs-live-overlay-0.1.1.tgz
 ```
 
 安装后可在任意终端直接运行：
@@ -43,7 +49,7 @@ obs-live-overlay --data-file D:\overlay-data\profiles.json
 obs-live-overlay --help
 ```
 
-Windows 默认数据文件位于 `%LOCALAPPDATA%\obs-live-overlay\profiles.json`。卸载本地命令可运行 `npm uninstall --global obs-live-overlay`。
+Windows 默认数据文件位于 `%LOCALAPPDATA%\obs-live-overlay\profiles.json`。卸载命令可运行 `npm uninstall --global @leejkee/obs-live-overlay`。
 
 Overlay 页面背景为透明；建议按直播画布设置 Browser Source 尺寸，再由 OBS 调整位置和裁剪。
 
