@@ -32,7 +32,7 @@ describe("CLI", () => {
   });
 
   it("默认数据文件位于独立的应用数据目录", () => {
-    const path = defaultDataFile({ LOCALAPPDATA: "C:\\AppData" });
+    const path = defaultDataFile({ LOCALAPPDATA: "C:\\AppData" }, "win32");
     assert.match(path.replaceAll("\\", "/"), /AppData\/obs-live-overlay\/profiles\.json$/);
   });
 });
