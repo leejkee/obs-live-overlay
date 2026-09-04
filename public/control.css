@@ -167,6 +167,8 @@ button:disabled { cursor: not-allowed; opacity: .36; }
 .viewer-id { display: flex; align-items: center; justify-content: space-between; gap: 14px; min-width: 0; }
 .viewer-id strong { overflow: hidden; color: var(--text-strong); font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
 .current-badge { flex: none; padding: 4px 7px; color: var(--accent); font-size: 9px; font-weight: 800; letter-spacing: .1em; border: 1px solid var(--accent-muted); border-radius: 6px; background: var(--accent-soft); }
+.set-current-button { flex: none; height: 30px; padding: 0 10px; color: var(--text-muted); font-size: 10px; border: 1px solid var(--border); background: var(--surface-input); }
+.set-current-button:hover { color: var(--text-strong); border-color: var(--border-strong); background: var(--surface-hover); }
 .name-editor { display: flex; align-items: center; gap: 8px; }
 .name-editor input { width: min(360px, 100%); height: 36px; border-color: transparent; background: transparent; }
 .name-editor input:hover { border-color: var(--border); }

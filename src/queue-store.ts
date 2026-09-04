@@ -34,6 +34,7 @@ export interface QueueState {
 
 export interface PersistedQueueState {
   items: QueueItem[];
+  currentId?: string | null;
   isQueueStopped: boolean;
   message: string;
   typography?: TypographySettings;
@@ -42,6 +43,7 @@ export interface PersistedQueueState {
 
 export class QueueStore {
   readonly #items: QueueItem[];
+  #currentId: string | null;
   #isQueueStopped: boolean;
   #message: string;
   #typography: TypographySettings;
@@ -49,6 +51,7 @@ export class QueueStore {
 
   constructor(initial?: PersistedQueueState) {
     this.#items = initial?.items.map((item) => ({ ...item })) ?? [];
+    this.#currentId = normalizeInitialCurrentId(initial?.currentId, this.#items);
     this.#isQueueStopped = initial?.isQueueStopped ?? false;
     this.#message = initial?.message ?? "";
     this.#typography = normalizeTypography(initial?.typography);
@@ -58,7 +61,7 @@ export class QueueStore {
   snapshot(): QueueState {
     return {
       items: this.#items.map((item) => ({ ...item })),
-      currentId: this.#items[0]?.id ?? null,
+      currentId: this.#currentId,
       isQueueStopped: this.#isQueueStopped,
       message: this.#message,
       typography: cloneTypography(this.#typography),
@@ -69,6 +72,7 @@ export class QueueStore {
   persistedState(): PersistedQueueState {
     return {
       items: this.#items.map((item) => ({ ...item })),
+      currentId: this.#currentId,
       isQueueStopped: this.#isQueueStopped,
       message: this.#message,
       typography: cloneTypography(this.#typography),
@@ -83,14 +87,30 @@ export class QueueStore {
     }
     const item = { id };
     this.#items.push(item);
+    if (this.#currentId === null) this.#currentId = item.id;
     this.#revision += 1;
     return { ...item };
   }
 
   dequeue(): QueueItem | null {
-    const item = this.#items.shift() ?? null;
-    if (item) this.#revision += 1;
-    return item ? { ...item } : null;
+    if (this.#currentId === null) return null;
+    const currentIndex = this.#items.findIndex((item) => item.id === this.#currentId);
+    if (currentIndex < 0) return null;
+    const [item] = this.#items.splice(currentIndex, 1);
+    this.#currentId = this.#items[currentIndex]?.id ?? this.#items[0]?.id ?? null;
+    this.#revision += 1;
+    return { ...item };
+  }
+
+  setCurrent(value: unknown): QueueItem {
+    const id = normalizeId(value);
+    const item = this.#items.find((candidate) => candidate.id === id);
+    if (!item) throw new NotFoundError("该 ID 不在队列中");
+    if (this.#currentId !== id) {
+      this.#currentId = id;
+      this.#revision += 1;
+    }
+    return { ...item };
   }
 
   setQueueStopped(value: unknown): boolean {
@@ -219,6 +239,16 @@ function isHexColor(value: unknown): value is string {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function normalizeInitialCurrentId(value: string | null | undefined, items: QueueItem[]): string | null {
+  if (value === undefined) return items[0]?.id ?? null;
+  if (value === null) {
+    if (items.length > 0) throw new ValidationError("非空队列必须指定当前上号用户");
+    return null;
+  }
+  if (!items.some((item) => item.id === value)) throw new ValidationError("当前上号用户不在队列中");
+  return value;
 }
 
 function normalizeId(value: unknown): string {
