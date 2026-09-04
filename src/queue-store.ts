@@ -2,11 +2,33 @@ export interface QueueItem {
   id: string;
 }
 
+export const fontFamilies = ["system", "modern", "serif", "rounded", "mono"] as const;
+export const textAlignments = ["left", "center", "right"] as const;
+export const typographySections = ["title", "message", "stopped", "queue"] as const;
+
+export type FontFamily = typeof fontFamilies[number];
+export type TextAlignment = typeof textAlignments[number];
+export type TypographySection = typeof typographySections[number];
+
+export interface TextStyle {
+  fontFamily: FontFamily;
+  fontSize: number;
+  bold: boolean;
+  italic: boolean;
+  textAlign: TextAlignment;
+  textColor: string;
+  outlineColor: string;
+  outlineWidth: number;
+}
+
+export type TypographySettings = Record<TypographySection, TextStyle>;
+
 export interface QueueState {
   items: QueueItem[];
   currentId: string | null;
   isQueueStopped: boolean;
   message: string;
+  typography: TypographySettings;
   revision: number;
 }
 
@@ -14,6 +36,7 @@ export interface PersistedQueueState {
   items: QueueItem[];
   isQueueStopped: boolean;
   message: string;
+  typography?: TypographySettings;
   revision: number;
 }
 
@@ -21,12 +44,14 @@ export class QueueStore {
   readonly #items: QueueItem[];
   #isQueueStopped: boolean;
   #message: string;
+  #typography: TypographySettings;
   #revision: number;
 
   constructor(initial?: PersistedQueueState) {
     this.#items = initial?.items.map((item) => ({ ...item })) ?? [];
     this.#isQueueStopped = initial?.isQueueStopped ?? false;
     this.#message = initial?.message ?? "";
+    this.#typography = normalizeTypography(initial?.typography);
     this.#revision = initial?.revision ?? 0;
   }
 
@@ -36,6 +61,7 @@ export class QueueStore {
       currentId: this.#items[0]?.id ?? null,
       isQueueStopped: this.#isQueueStopped,
       message: this.#message,
+      typography: cloneTypography(this.#typography),
       revision: this.#revision,
     };
   }
@@ -45,6 +71,7 @@ export class QueueStore {
       items: this.#items.map((item) => ({ ...item })),
       isQueueStopped: this.#isQueueStopped,
       message: this.#message,
+      typography: cloneTypography(this.#typography),
       revision: this.#revision,
     };
   }
@@ -85,6 +112,113 @@ export class QueueStore {
     }
     return this.#message;
   }
+
+  setTypography(sectionValue: unknown, value: unknown): TextStyle {
+    const section = normalizeTypographySection(sectionValue);
+    const current = this.#typography[section];
+    const next = normalizeTextStyle(value, current);
+    if (!sameTextStyle(current, next)) {
+      this.#typography[section] = next;
+      this.#revision += 1;
+    }
+    return { ...this.#typography[section] };
+  }
+}
+
+export function createDefaultTypography(): TypographySettings {
+  return {
+    title: { fontFamily: "system", fontSize: 30, bold: true, italic: false, textAlign: "left", textColor: "#ffffff", outlineColor: "#050505", outlineWidth: 1 },
+    message: { fontFamily: "system", fontSize: 22, bold: true, italic: false, textAlign: "left", textColor: "#ffffff", outlineColor: "#050505", outlineWidth: 1 },
+    stopped: { fontFamily: "system", fontSize: 27, bold: true, italic: false, textAlign: "center", textColor: "#ffffff", outlineColor: "#050505", outlineWidth: 1 },
+    queue: { fontFamily: "system", fontSize: 24, bold: true, italic: false, textAlign: "left", textColor: "#ffffff", outlineColor: "#050505", outlineWidth: 1 },
+  };
+}
+
+export function normalizeTypography(value: unknown): TypographySettings {
+  const defaults = createDefaultTypography();
+  if (value === undefined) return defaults;
+  if (!isRecord(value)) throw new ValidationError("字体设置格式无效");
+  return {
+    title: normalizeTextStyle(value.title, defaults.title),
+    message: normalizeTextStyle(value.message, defaults.message),
+    stopped: normalizeTextStyle(value.stopped, defaults.stopped),
+    queue: normalizeTextStyle(value.queue, defaults.queue),
+  };
+}
+
+function normalizeTypographySection(value: unknown): TypographySection {
+  if (typeof value !== "string" || !typographySections.includes(value as TypographySection)) {
+    throw new ValidationError("字体设置区域无效");
+  }
+  return value as TypographySection;
+}
+
+function normalizeTextStyle(value: unknown, fallback: TextStyle): TextStyle {
+  if (value === undefined) return { ...fallback };
+  if (!isRecord(value)) throw new ValidationError("字体样式格式无效");
+  const fontFamily = value.fontFamily ?? fallback.fontFamily;
+  const fontSize = value.fontSize ?? fallback.fontSize;
+  const bold = value.bold ?? fallback.bold;
+  const italic = value.italic ?? fallback.italic;
+  const textAlign = value.textAlign ?? fallback.textAlign;
+  const textColor = value.textColor ?? fallback.textColor;
+  const outlineColor = value.outlineColor ?? fallback.outlineColor;
+  const outlineWidth = value.outlineWidth ?? fallback.outlineWidth;
+  if (typeof fontFamily !== "string" || !fontFamilies.includes(fontFamily as FontFamily)) {
+    throw new ValidationError("字体类型无效");
+  }
+  if (typeof fontSize !== "number" || !Number.isInteger(fontSize) || fontSize < 10 || fontSize > 96) {
+    throw new ValidationError("字号必须是 10 到 96 之间的整数");
+  }
+  if (typeof bold !== "boolean" || typeof italic !== "boolean") {
+    throw new ValidationError("字体格式必须是布尔值");
+  }
+  if (typeof textAlign !== "string" || !textAlignments.includes(textAlign as TextAlignment)) {
+    throw new ValidationError("文字对齐方式无效");
+  }
+  if (!isHexColor(textColor)) throw new ValidationError("文字颜色必须是六位十六进制颜色");
+  if (!isHexColor(outlineColor)) throw new ValidationError("描边颜色必须是六位十六进制颜色");
+  if (typeof outlineWidth !== "number" || !Number.isInteger(outlineWidth) || outlineWidth < 0 || outlineWidth > 8) {
+    throw new ValidationError("描边宽度必须是 0 到 8 之间的整数");
+  }
+  return {
+    fontFamily: fontFamily as FontFamily,
+    fontSize,
+    bold,
+    italic,
+    textAlign: textAlign as TextAlignment,
+    textColor: textColor.toLowerCase(),
+    outlineColor: outlineColor.toLowerCase(),
+    outlineWidth,
+  };
+}
+
+function cloneTypography(value: TypographySettings): TypographySettings {
+  return {
+    title: { ...value.title },
+    message: { ...value.message },
+    stopped: { ...value.stopped },
+    queue: { ...value.queue },
+  };
+}
+
+function sameTextStyle(left: TextStyle, right: TextStyle): boolean {
+  return left.fontFamily === right.fontFamily
+    && left.fontSize === right.fontSize
+    && left.bold === right.bold
+    && left.italic === right.italic
+    && left.textAlign === right.textAlign
+    && left.textColor === right.textColor
+    && left.outlineColor === right.outlineColor
+    && left.outlineWidth === right.outlineWidth;
+}
+
+function isHexColor(value: unknown): value is string {
+  return typeof value === "string" && /^#[0-9a-f]{6}$/i.test(value);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function normalizeId(value: unknown): string {

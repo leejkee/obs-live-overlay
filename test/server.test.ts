@@ -33,7 +33,13 @@ describe("Overlay Service", () => {
       fetch(`${baseUrl}/overlay.css`),
     ]);
     assert.equal(control.status, 200);
-    assert.match(await control.text(), /等候队列/);
+    const controlHtml = await control.text();
+    assert.match(controlHtml, /等候队列/);
+    assert.equal(controlHtml.match(/data-typography-section=/g)?.length, 1);
+    assert.match(controlHtml, /data-content-section="queue"/);
+    assert.match(controlHtml, /data-content-section="title"/);
+    assert.match(controlHtml, /data-content-section="message"/);
+    assert.match(controlHtml, /data-content-section="stopped"/);
     assert.equal(overlay.status, 200);
     const overlayHtml = await overlay.text();
     assert.match(overlayHtml, /queue-list/);
@@ -43,12 +49,17 @@ describe("Overlay Service", () => {
     assert.doesNotMatch(overlayHtml, /停止排队/);
     assert.doesNotMatch(overlayHtml, /LIVE QUEUE|queue-count/);
     assert.match(await (await fetch(`${baseUrl}/overlay.js`)).text(), /当前上号/);
+    const controlScript = await (await fetch(`${baseUrl}/control.js`)).text();
+    assert.match(controlScript, /data-text-color/);
+    assert.match(controlScript, /data-outline-color/);
+    assert.match(controlScript, /data-outline-width/);
     const overlayStyles = await overlayCss.text();
     assert.match(overlayStyles, /\.overlay\s*\{[^}]*background:\s*transparent;/);
     assert.match(overlayStyles, /--current-accent:\s*#ff7a00/);
     assert.match(overlayStyles, /\.queue-header\s*\{[^}]*grid-template-columns:\s*minmax\(118px,\s*2fr\)\s*minmax\(0,\s*3fr\)/);
-    assert.match(overlayStyles, /\.stopped-banner\s*\{[^}]*background:\s*#ffd60a;/);
-    assert.match(overlayStyles, /\.stopped-banner\s*\{[^}]*border:\s*3px solid #ff3b30;/);
+    assert.match(overlayStyles, /\.stopped-banner\s*\{[^}]*background:\s*transparent;/);
+    assert.match(overlayStyles, /\.stopped-banner\s*\{[^}]*border:\s*0;/);
+    assert.doesNotMatch(overlayStyles, /#ffd60a|#ff3b30/);
     assert.match(overlayStyles, /-webkit-text-stroke/);
     assert.doesNotMatch(overlayStyles, /linear-gradient|filter:\s*blur|box-shadow/);
   });
@@ -118,6 +129,35 @@ describe("Overlay Service", () => {
     const message = JSON.parse(await broadcastPromise);
     assert.equal(message.state.message, "欢迎加入");
     socket.close();
+  });
+
+  it("更新字体设置并通过 WebSocket 广播", async () => {
+    const wsUrl = baseUrl.replace("http:", "ws:") + "/ws";
+    const socket = new WebSocket(wsUrl);
+    await onceMessage(socket);
+    const broadcastPromise = onceMessage(socket);
+
+    const response = await fetch(`${baseUrl}/api/overlays/queue/typography/title`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fontFamily: "serif", fontSize: 38, italic: true, textColor: "#ffee22", outlineColor: "#112233", outlineWidth: 3 }),
+    });
+    assert.equal(response.status, 200);
+    const state = await response.json();
+    assert.equal(state.typography.title.fontSize, 38);
+    assert.equal(state.typography.title.textColor, "#ffee22");
+    assert.equal(state.typography.title.outlineColor, "#112233");
+    assert.equal(state.typography.title.outlineWidth, 3);
+    const message = JSON.parse(await broadcastPromise);
+    assert.equal(message.state.typography.title.fontFamily, "serif");
+    socket.close();
+
+    const invalidResponse = await fetch(`${baseUrl}/api/overlays/queue/typography/title`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ outlineWidth: 20 }),
+    });
+    assert.equal(invalidResponse.status, 400);
   });
 
   it("创建、重命名、切换和删除 Profile", async () => {

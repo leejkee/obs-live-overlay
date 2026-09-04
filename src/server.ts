@@ -108,6 +108,15 @@ export async function createOverlayServer(options: { dataFile?: string } = {}) {
       broadcast();
       return json(response, 200, manager.activeQueueState());
     }
+    const typographyMatch = url.pathname.match(new RegExp(`^/api/overlays/${overlayId}/typography/([^/]+)$`));
+    if (method === "PUT" && typographyMatch) {
+      const body = await readJson(request);
+      await manager.updateActiveQueue((queue) => {
+        queue.setTypography(decodeURIComponent(typographyMatch[1]), body);
+      });
+      broadcast();
+      return json(response, 200, manager.activeQueueState());
+    }
 
     if (method !== "GET" && method !== "HEAD") throw new NotFoundError("接口不存在");
     if (url.pathname === "/") return redirect(response, "/control");

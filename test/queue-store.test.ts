@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { ConflictError, QueueStore, ValidationError } from "../src/queue-store.js";
+import { ConflictError, createDefaultTypography, QueueStore, ValidationError } from "../src/queue-store.js";
 
 describe("QueueStore", () => {
   it("自动把队首标记为 current，出队后切换到下一位", () => {
@@ -12,6 +12,7 @@ describe("QueueStore", () => {
       currentId: "User-A",
       isQueueStopped: false,
       message: "",
+      typography: createDefaultTypography(),
       revision: 2,
     });
 
@@ -57,5 +58,37 @@ describe("QueueStore", () => {
     assert.equal(store.snapshot().message, "");
     assert.throws(() => store.setMessage(123), ValidationError);
     assert.throws(() => store.setMessage("x".repeat(121)), ValidationError);
+  });
+
+  it("按区域保存字体、格式、字号、对齐和渲染设置", () => {
+    const store = new QueueStore();
+    assert.deepEqual(store.setTypography("title", {
+      fontFamily: "serif",
+      fontSize: 42,
+      bold: false,
+      italic: true,
+      textAlign: "center",
+      textColor: "#AABBCC",
+      outlineColor: "#112233",
+      outlineWidth: 3,
+    }), {
+      fontFamily: "serif",
+      fontSize: 42,
+      bold: false,
+      italic: true,
+      textAlign: "center",
+      textColor: "#aabbcc",
+      outlineColor: "#112233",
+      outlineWidth: 3,
+    });
+    assert.equal(store.snapshot().revision, 1);
+    store.setTypography("title", { fontSize: 42 });
+    assert.equal(store.snapshot().revision, 1);
+    assert.throws(() => store.setTypography("unknown", {}), ValidationError);
+    assert.throws(() => store.setTypography("queue", { fontSize: 100 }), ValidationError);
+    assert.throws(() => store.setTypography("queue", { fontFamily: "remote-font" }), ValidationError);
+    assert.throws(() => store.setTypography("queue", { textColor: "white" }), ValidationError);
+    assert.throws(() => store.setTypography("queue", { outlineColor: "#fff" }), ValidationError);
+    assert.throws(() => store.setTypography("queue", { outlineWidth: 9 }), ValidationError);
   });
 });
