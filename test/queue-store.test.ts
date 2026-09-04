@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { ConflictError, createDefaultTypography, QueueStore, ValidationError } from "../src/queue-store.js";
+import { ConflictError, createDefaultTypography, NotFoundError, QueueStore, ValidationError } from "../src/queue-store.js";
 
 describe("QueueStore", () => {
   it("自动把队首标记为 current，出队后切换到下一位", () => {
@@ -29,6 +29,27 @@ describe("QueueStore", () => {
     snapshot.items[0].id = "Changed";
     snapshot.items.push({ id: "Fake" });
     assert.deepEqual(store.snapshot().items, [{ id: "Viewer" }]);
+  });
+
+  it("切换当前上号用户时保持队列顺序，并从当前位置继续出队", () => {
+    const store = new QueueStore();
+    store.enqueue("User-A");
+    store.enqueue("User-B");
+    store.enqueue("User-C");
+
+    assert.equal(store.setCurrent("User-B").id, "User-B");
+    assert.deepEqual(store.snapshot().items.map((item) => item.id), ["User-A", "User-B", "User-C"]);
+    assert.equal(store.snapshot().currentId, "User-B");
+    assert.equal(store.snapshot().revision, 4);
+    store.setCurrent("User-B");
+    assert.equal(store.snapshot().revision, 4);
+    assert.throws(() => store.setCurrent("Missing"), NotFoundError);
+
+    assert.equal(store.dequeue()?.id, "User-B");
+    assert.deepEqual(store.snapshot().items.map((item) => item.id), ["User-A", "User-C"]);
+    assert.equal(store.snapshot().currentId, "User-C");
+    assert.equal(store.dequeue()?.id, "User-C");
+    assert.equal(store.snapshot().currentId, "User-A");
   });
 
   it("拒绝空 ID 和重复 ID", () => {

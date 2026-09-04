@@ -57,6 +57,7 @@ describe("Overlay Service", () => {
     assert.match(controlScript, /data-outline-color/);
     assert.match(controlScript, /data-outline-width/);
     assert.match(controlScript, /obs-live-overlay:control-theme/);
+    assert.match(controlScript, /\/api\/overlays\/queue\/current/);
     const controlStyles = await controlCss.text();
     assert.match(controlStyles, /:root\[data-theme="light"\]/);
     assert.doesNotMatch(controlStyles, /gradient|box-shadow|backdrop-filter|animation|transition/i);
@@ -151,6 +152,43 @@ describe("Overlay Service", () => {
     const message = JSON.parse(await broadcastPromise);
     assert.equal(message.state.message, "欢迎加入");
     socket.close();
+  });
+
+  it("指定当前上号用户时不改变队列顺序，并支持当前用户出队", async () => {
+    await fetch(`${baseUrl}/api/overlays/queue/items`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: "User-B" }),
+    });
+    const wsUrl = baseUrl.replace("http:", "ws:") + "/ws";
+    const socket = new WebSocket(wsUrl);
+    await onceMessage(socket);
+    const broadcastPromise = onceMessage(socket);
+
+    const response = await fetch(`${baseUrl}/api/overlays/queue/current`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: "User-B" }),
+    });
+    assert.equal(response.status, 200);
+    const state = await response.json();
+    assert.deepEqual(state.items.map((item: { id: string }) => item.id), ["User-A", "User-B"]);
+    assert.equal(state.currentId, "User-B");
+    const message = JSON.parse(await broadcastPromise);
+    assert.equal(message.state.currentId, "User-B");
+
+    const dequeueResponse = await fetch(`${baseUrl}/api/overlays/queue/dequeue`, { method: "POST" });
+    const dequeuedState = await dequeueResponse.json();
+    assert.deepEqual(dequeuedState.items, [{ id: "User-A" }]);
+    assert.equal(dequeuedState.currentId, "User-A");
+    socket.close();
+
+    const missingResponse = await fetch(`${baseUrl}/api/overlays/queue/current`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: "Missing" }),
+    });
+    assert.equal(missingResponse.status, 404);
   });
 
   it("更新字体设置并通过 WebSocket 广播", async () => {

@@ -338,8 +338,21 @@ function createRow(item, index) {
   if (item.id === state.currentId) {
     const badge = document.createElement("span");
     badge.className = "current-badge";
-    badge.textContent = "CURRENT";
+    badge.textContent = "当前上号";
     content.append(badge);
+  } else {
+    const setCurrentButton = document.createElement("button");
+    setCurrentButton.className = "set-current-button";
+    setCurrentButton.type = "button";
+    setCurrentButton.textContent = "设为当前";
+    setCurrentButton.setAttribute("aria-label", `将 ${item.id} 设为当前上号`);
+    setCurrentButton.addEventListener("click", () => {
+      act(() => request("/api/overlays/queue/current", {
+        method: "PUT",
+        body: JSON.stringify({ id: item.id }),
+      }));
+    });
+    content.append(setCurrentButton);
   }
   row.append(position, content);
   return row;

@@ -96,6 +96,12 @@ export async function createOverlayServer(options: { dataFile?: string } = {}) {
       broadcast();
       return json(response, 200, manager.activeQueueState());
     }
+    if (method === "PUT" && url.pathname === `/api/overlays/${overlayId}/current`) {
+      const body = await readJson(request);
+      await manager.updateActiveQueue((queue) => { queue.setCurrent(body.id); });
+      broadcast();
+      return json(response, 200, manager.activeQueueState());
+    }
     if (method === "PUT" && url.pathname === `/api/overlays/${overlayId}/stopped`) {
       const body = await readJson(request);
       await manager.updateActiveQueue((queue) => { queue.setQueueStopped(body.stopped); });

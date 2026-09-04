@@ -27,7 +27,7 @@ describe("ProfileManager", () => {
       profiles: [{ id: "default", name: "默认", isDefault: true }],
     });
     const persisted = JSON.parse(await readFile(file, "utf8"));
-    assert.equal(persisted.version, 3);
+    assert.equal(persisted.version, 4);
     assert.equal(persisted.activeProfileId, "default");
   });
 
@@ -36,6 +36,8 @@ describe("ProfileManager", () => {
     const profile = await manager.createProfile("周末场");
     await manager.updateActiveQueue((queue) => {
       queue.enqueue("User-A");
+      queue.enqueue("User-B");
+      queue.setCurrent("User-B");
       queue.setMessage("欢迎");
       queue.setQueueStopped(true);
       queue.setTypography("message", { fontFamily: "serif", fontSize: 31, italic: true, textColor: "#22ccaa", outlineColor: "#330055", outlineWidth: 2 });
@@ -46,7 +48,8 @@ describe("ProfileManager", () => {
     await manager.activateProfile(profile.id);
     const restored = await ProfileManager.load(file);
     assert.equal(restored.activeProfile().name, "周末场");
-    assert.deepEqual(restored.activeQueueState().items, [{ id: "User-A" }]);
+    assert.deepEqual(restored.activeQueueState().items, [{ id: "User-A" }, { id: "User-B" }]);
+    assert.equal(restored.activeQueueState().currentId, "User-B");
     assert.equal(restored.activeQueueState().message, "欢迎");
     assert.equal(restored.activeQueueState().isQueueStopped, true);
     assert.deepEqual(restored.activeQueueState().typography.message, {
@@ -108,6 +111,27 @@ describe("ProfileManager", () => {
     assert.equal(restored.activeQueueState().typography.title.textColor, "#ffffff");
     assert.equal(restored.activeQueueState().typography.title.outlineColor, "#050505");
     assert.equal(restored.activeQueueState().typography.title.outlineWidth, 1);
+  });
+
+  it("加载第三版 Profile 时默认以队首作为当前上号用户", async () => {
+    const { file } = await createManager();
+    const legacyData = {
+      version: 3,
+      activeProfileId: "default",
+      profiles: [{
+        id: "default",
+        name: "默认",
+        queue: {
+          items: [{ id: "User-A" }, { id: "User-B" }],
+          isQueueStopped: false,
+          message: "",
+          revision: 2,
+        },
+      }],
+    };
+    await writeFile(file, JSON.stringify(legacyData), "utf8");
+    const restored = await ProfileManager.load(file);
+    assert.equal(restored.activeQueueState().currentId, "User-A");
   });
 
   it("支持重命名和删除，并保护 default Profile", async () => {

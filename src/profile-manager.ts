@@ -9,8 +9,8 @@ import {
   type QueueState,
 } from "./queue-store.js";
 
-const formatVersion = 3;
-const supportedFormatVersions = new Set([1, 2, formatVersion]);
+const formatVersion = 4;
+const supportedFormatVersions = new Set([1, 2, 3, formatVersion]);
 const defaultProfileId = "default";
 
 interface StoredProfile {
@@ -214,7 +214,8 @@ function parseStoredData(raw: string): StoredData {
   if (!isRecord(value) || typeof value.version !== "number" || !supportedFormatVersions.has(value.version) || !Array.isArray(value.profiles)) {
     throw new Error("Profile 数据文件格式无效或版本不受支持");
   }
-  const profiles = value.profiles.map(parseProfile);
+  const version = value.version;
+  const profiles = value.profiles.map((profile) => parseProfile(profile, version));
   const ids = new Set(profiles.map((profile) => profile.id));
   if (ids.size !== profiles.length || !ids.has(defaultProfileId)) {
     throw new Error("Profile 数据必须包含唯一的 default Profile");
@@ -225,7 +226,7 @@ function parseStoredData(raw: string): StoredData {
   return { version: formatVersion, activeProfileId: value.activeProfileId, profiles };
 }
 
-function parseProfile(value: unknown): StoredProfile {
+function parseProfile(value: unknown, version: number): StoredProfile {
   if (!isRecord(value) || typeof value.id !== "string" || typeof value.name !== "string" || !isRecord(value.queue)) {
     throw new Error("Profile 数据项格式无效");
   }
@@ -237,12 +238,20 @@ function parseProfile(value: unknown): StoredProfile {
     if (!isRecord(item) || typeof item.id !== "string" || !item.id) throw new Error("Profile 队列项格式无效");
     return { id: item.id };
   });
-  if (new Set(items.map((item) => item.id)).size !== items.length) throw new Error("Profile 队列中包含重复 ID");
+  const itemIds = new Set(items.map((item) => item.id));
+  if (itemIds.size !== items.length) throw new Error("Profile 队列中包含重复 ID");
+  const currentId = version >= 4 ? queue.currentId : items[0]?.id ?? null;
+  if ((currentId !== null && typeof currentId !== "string")
+    || (typeof currentId === "string" && !itemIds.has(currentId))
+    || (currentId === null && items.length > 0)) {
+    throw new Error("Profile 当前上号用户无效");
+  }
   return {
     id: value.id,
     name: value.name,
     queue: {
       items,
+      currentId,
       isQueueStopped: queue.isQueueStopped,
       message: queue.message,
       typography: normalizeTypography(queue.typography),
