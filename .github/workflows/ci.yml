@@ -45,7 +45,7 @@ jobs:
           cache: npm
 
       - name: 安装依赖
-        run: npm ci
+        run: npm ci --prefer-offline --no-audit --no-fund
 
       - name: 校验、测试并构建
         run: npm run verify

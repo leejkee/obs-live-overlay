@@ -73,7 +73,7 @@ Queue 控制页支持新建、切换、重命名和删除 Profile。`default` Pr
 
 ## CI 与发布
 
-推送到 `main` 或提交 Pull Request 时，GitHub Actions 会在 Node.js 20、22、24、26 上执行类型检查、测试和构建，并额外在 Windows 环境验证。发布产物不会上传 npm Registry，而是附加到 GitHub Release，保持当前本地工具的分发方式。
+推送到 `main` 或提交 Pull Request 时，GitHub Actions 会在 Node.js 20、22、24、26 上执行类型检查、测试和构建，并额外在 Windows 环境验证。依赖安装优先复用 npm 缓存，并跳过与构建无关的审计和赞助请求。发布产物不会上传 npm Registry，而是附加到 GitHub Release，保持当前本地工具的分发方式。
 
 发布步骤：
 
