@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { readFileSync } from "node:fs";
+import { readFileSync, realpathSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -123,7 +123,20 @@ function helpText(): string {
 
 export class CliArgumentError extends Error {}
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
+export function isMainModule(
+  moduleUrl: string,
+  entryPoint: string | undefined,
+  canonicalize: (path: string) => string = realpathSync,
+): boolean {
+  if (!entryPoint) return false;
+  try {
+    return canonicalize(fileURLToPath(moduleUrl)) === canonicalize(resolve(entryPoint));
+  } catch {
+    return false;
+  }
+}
+
+if (isMainModule(import.meta.url, process.argv[1])) {
   runCli().catch((error) => {
     if ((error as NodeJS.ErrnoException).code === "EADDRINUSE") {
       console.error("启动失败：端口已被占用，请使用 --port 指定其他端口。");

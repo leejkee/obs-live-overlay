@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
+import { resolve } from "node:path";
 import { describe, it } from "node:test";
-import { CliArgumentError, defaultDataFile, parseCliOptions } from "../src/cli.js";
+import { pathToFileURL } from "node:url";
+import { CliArgumentError, defaultDataFile, isMainModule, parseCliOptions } from "../src/cli.js";
 
 describe("CLI", () => {
   it("解析 host、port 和数据文件参数", () => {
@@ -34,5 +36,13 @@ describe("CLI", () => {
   it("默认数据文件位于独立的应用数据目录", () => {
     const path = defaultDataFile({ LOCALAPPDATA: "C:\\AppData" }, "win32");
     assert.match(path.replaceAll("\\", "/"), /AppData\/obs-live-overlay\/profiles\.json$/);
+  });
+
+  it("识别 npm 全局命令的符号链接入口", () => {
+    const modulePath = resolve("dist/cli.js");
+    const commandLink = resolve("bin/obs-live-overlay");
+    const canonicalize = (path: string) => path === commandLink ? modulePath : path;
+    assert.equal(isMainModule(pathToFileURL(modulePath).href, commandLink, canonicalize), true);
+    assert.equal(isMainModule(pathToFileURL(modulePath).href, undefined, canonicalize), false);
   });
 });
