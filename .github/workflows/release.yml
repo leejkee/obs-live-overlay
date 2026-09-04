@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  id-token: write
 
 concurrency:
   group: release-${{ github.ref }}
@@ -29,7 +30,11 @@ jobs:
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24
-          cache: npm
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+
+      - name: 配置支持 Trusted Publishing 的 npm
+        run: npm install --global npm@11.14.1 --no-audit --no-fund
 
       - name: 校验标签与包版本
         shell: bash
@@ -84,4 +89,27 @@ jobs:
           if [[ "${package_version}" == *-* ]]; then
             release_args+=(--prerelease --latest=false)
           fi
-          gh release create "${release_args[@]}"
+          if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
+            gh release upload "${GITHUB_REF_NAME}" \
+              "release/leejkee-obs-live-overlay-${package_version}.tgz" \
+              "release/leejkee-obs-live-overlay-${package_version}.tgz.sha256" \
+              --clobber
+          else
+            gh release create "${release_args[@]}"
+          fi
+
+      - name: 发布到 npm
+        shell: bash
+        run: |
+          package_version="$(node --print "require('./package.json').version")"
+          package_spec="@leejkee/obs-live-overlay@${package_version}"
+          package_name="leejkee-obs-live-overlay-${package_version}.tgz"
+          if [[ "$(npm view "${package_spec}" version 2>/dev/null || true)" == "${package_version}" ]]; then
+            echo "${package_spec} 已存在，跳过重复发布"
+            exit 0
+          fi
+          publish_args=("./release/${package_name}" --access public)
+          if [[ "${package_version}" == *-* ]]; then
+            publish_args+=(--tag next)
+          fi
+          npm publish "${publish_args[@]}"
