@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ProfileManager } from "../src/profile-manager.js";
@@ -27,7 +27,7 @@ describe("ProfileManager", () => {
       profiles: [{ id: "default", name: "默认", isDefault: true }],
     });
     const persisted = JSON.parse(await readFile(file, "utf8"));
-    assert.equal(persisted.version, 1);
+    assert.equal(persisted.version, 3);
     assert.equal(persisted.activeProfileId, "default");
   });
 
@@ -38,6 +38,7 @@ describe("ProfileManager", () => {
       queue.enqueue("User-A");
       queue.setMessage("欢迎");
       queue.setQueueStopped(true);
+      queue.setTypography("message", { fontFamily: "serif", fontSize: 31, italic: true, textColor: "#22ccaa", outlineColor: "#330055", outlineWidth: 2 });
     });
     await manager.activateProfile("default");
     assert.deepEqual(manager.activeQueueState().items, []);
@@ -48,6 +49,65 @@ describe("ProfileManager", () => {
     assert.deepEqual(restored.activeQueueState().items, [{ id: "User-A" }]);
     assert.equal(restored.activeQueueState().message, "欢迎");
     assert.equal(restored.activeQueueState().isQueueStopped, true);
+    assert.deepEqual(restored.activeQueueState().typography.message, {
+      fontFamily: "serif",
+      fontSize: 31,
+      bold: true,
+      italic: true,
+      textAlign: "left",
+      textColor: "#22ccaa",
+      outlineColor: "#330055",
+      outlineWidth: 2,
+    });
+  });
+
+  it("加载旧版 Profile 时补充默认字体设置", async () => {
+    const { file } = await createManager();
+    const legacyData = {
+      version: 1,
+      activeProfileId: "default",
+      profiles: [{
+        id: "default",
+        name: "默认",
+        queue: { items: [], isQueueStopped: false, message: "", revision: 0 },
+      }],
+    };
+    await writeFile(file, JSON.stringify(legacyData), "utf8");
+    const restored = await ProfileManager.load(file);
+    assert.equal(restored.activeQueueState().typography.title.fontSize, 30);
+    assert.equal(restored.activeQueueState().typography.queue.fontFamily, "system");
+    assert.equal(restored.activeQueueState().typography.queue.textColor, "#ffffff");
+    assert.equal(restored.activeQueueState().typography.stopped.outlineWidth, 1);
+  });
+
+  it("加载第二版 Profile 时补充默认文字渲染设置", async () => {
+    const { file } = await createManager();
+    const legacyData = {
+      version: 2,
+      activeProfileId: "default",
+      profiles: [{
+        id: "default",
+        name: "默认",
+        queue: {
+          items: [],
+          isQueueStopped: false,
+          message: "",
+          revision: 0,
+          typography: {
+            title: { fontFamily: "serif", fontSize: 40, bold: true, italic: false, textAlign: "center" },
+            message: { fontFamily: "system", fontSize: 22, bold: true, italic: false, textAlign: "left" },
+            stopped: { fontFamily: "system", fontSize: 27, bold: true, italic: false, textAlign: "center" },
+            queue: { fontFamily: "system", fontSize: 24, bold: true, italic: false, textAlign: "left" },
+          },
+        },
+      }],
+    };
+    await writeFile(file, JSON.stringify(legacyData), "utf8");
+    const restored = await ProfileManager.load(file);
+    assert.equal(restored.activeQueueState().typography.title.fontFamily, "serif");
+    assert.equal(restored.activeQueueState().typography.title.textColor, "#ffffff");
+    assert.equal(restored.activeQueueState().typography.title.outlineColor, "#050505");
+    assert.equal(restored.activeQueueState().typography.title.outlineWidth, 1);
   });
 
   it("支持重命名和删除，并保护 default Profile", async () => {

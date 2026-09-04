@@ -3,6 +3,22 @@ const empty = document.querySelector("#empty-message");
 const stoppedBanner = document.querySelector("#stopped-banner");
 const overlayMessage = document.querySelector("#overlay-message");
 const connection = document.querySelector("#connection-status");
+const root = document.documentElement;
+
+const fontStacks = {
+  system: 'Inter, "Segoe UI", "Microsoft YaHei", sans-serif',
+  modern: '"Microsoft YaHei UI", "PingFang SC", "Noto Sans CJK SC", sans-serif',
+  serif: '"Noto Serif CJK SC", "Songti SC", SimSun, serif',
+  rounded: '"Arial Rounded MT Bold", "Microsoft YaHei", sans-serif',
+  mono: '"Cascadia Mono", "Microsoft YaHei", monospace',
+};
+const boldWeights = { title: 700, message: 800, stopped: 900, queue: 750 };
+const defaultTypography = {
+  title: { fontFamily: "system", fontSize: 30, bold: true, italic: false, textAlign: "left", textColor: "#ffffff", outlineColor: "#050505", outlineWidth: 1 },
+  message: { fontFamily: "system", fontSize: 22, bold: true, italic: false, textAlign: "left", textColor: "#ffffff", outlineColor: "#050505", outlineWidth: 1 },
+  stopped: { fontFamily: "system", fontSize: 27, bold: true, italic: false, textAlign: "center", textColor: "#ffffff", outlineColor: "#050505", outlineWidth: 1 },
+  queue: { fontFamily: "system", fontSize: 24, bold: true, italic: false, textAlign: "left", textColor: "#ffffff", outlineColor: "#050505", outlineWidth: 1 },
+};
 
 let socket;
 let reconnectTimer;
@@ -10,6 +26,7 @@ let reconnectDelay = 500;
 let hasRendered = false;
 
 function update(nextState) {
+  applyTypography(nextState.typography);
   const message = nextState.message ?? "";
   overlayMessage.textContent = message;
   overlayMessage.hidden = !message;
@@ -67,6 +84,27 @@ function update(nextState) {
 
   empty.hidden = nextItems.length > 0;
   hasRendered = true;
+}
+
+function applyTypography(typography = defaultTypography) {
+  for (const section of Object.keys(defaultTypography)) {
+    const style = { ...defaultTypography[section], ...typography?.[section] };
+    root.style.setProperty(`--${section}-font-family`, fontStacks[style.fontFamily] ?? fontStacks.system);
+    root.style.setProperty(`--${section}-font-size`, `${style.fontSize}px`);
+    root.style.setProperty(`--${section}-font-weight`, String(style.bold ? boldWeights[section] : 400));
+    root.style.setProperty(`--${section}-font-style`, style.italic ? "italic" : "normal");
+    root.style.setProperty(`--${section}-text-align`, style.textAlign);
+    root.style.setProperty(`--${section}-text-color`, style.textColor);
+    root.style.setProperty(`--${section}-outline-color`, style.outlineColor);
+    root.style.setProperty(`--${section}-outline-width`, `${style.outlineWidth}px`);
+    root.style.setProperty(`--${section}-outline-offset`, `${-style.outlineWidth}px`);
+  }
+  const stoppedAlignment = typography?.stopped?.textAlign ?? defaultTypography.stopped.textAlign;
+  root.style.setProperty("--stopped-content-align", {
+    left: "flex-start",
+    center: "center",
+    right: "flex-end",
+  }[stoppedAlignment]);
 }
 
 function createItem(item) {

@@ -37,8 +37,9 @@
 
         <section class="profile-control" aria-labelledby="profile-heading">
           <div>
-            <h2 id="profile-heading">Queue Profile</h2>
-            <p>选择要加载到 Queue Overlay 的独立配置</p>
+            <span class="section-kicker">当前方案</span>
+            <h2 id="profile-heading">队列配置</h2>
+            <p>内容和字体样式会随配置方案独立保存</p>
           </div>
           <div class="profile-actions">
             <label class="sr-only" for="profile-select">当前 Profile</label>
@@ -49,58 +50,109 @@
           </div>
         </section>
 
-        <section class="add-card" aria-labelledby="add-heading">
+        <div class="workspace-heading">
           <div>
-            <h2 id="add-heading">加入排队</h2>
-            <p>输入观众 ID 并加入队尾</p>
+            <span class="section-kicker">Overlay 内容</span>
+            <h2>逐块编辑</h2>
           </div>
-          <form id="add-form">
-            <label class="sr-only" for="viewer-id">观众 ID</label>
-            <input id="viewer-id" name="id" maxlength="80" autocomplete="off" placeholder="输入观众 ID" required />
-            <button class="primary-button" type="submit">加入队列</button>
-          </form>
-        </section>
+          <p>每张控制卡对应画面中的一个内容区域，字体修改会实时生效。</p>
+        </div>
 
-        <section class="message-control" aria-labelledby="message-heading">
-          <div>
-            <h2 id="message-heading">Overlay 消息</h2>
-            <p>显示在“等候队列”标题下方，留空时自动隐藏</p>
+        <div class="editor-layout">
+          <div class="content-stack">
+            <section class="content-card queue-card selected" data-content-section="queue" aria-labelledby="queue-heading">
+              <header class="content-card-header queue-card-header">
+                <span class="block-index">01</span>
+                <div>
+                  <h2 id="queue-heading">队列内容</h2>
+                  <p><span id="queue-count">0</span> 位观众正在等待 · 高频操作</p>
+                </div>
+                <div class="header-actions">
+                  <button class="section-select-button" type="button" data-select-section="queue" aria-pressed="true">正在编辑</button>
+                  <button id="dequeue-button" class="secondary-button" type="button">当前观众出队</button>
+                </div>
+              </header>
+
+              <form id="add-form" class="content-form queue-add-form">
+                <label class="field-label" for="viewer-id">加入排队</label>
+                <div class="input-actions">
+                  <input id="viewer-id" name="id" maxlength="80" autocomplete="off" placeholder="输入观众 ID" required />
+                  <button class="primary-button" type="submit">加入队列</button>
+                </div>
+              </form>
+
+              <div class="queue-content">
+                <div id="empty-state" class="empty-state">
+                  <span class="empty-icon" aria-hidden="true">◇</span>
+                  <h3>队列还是空的</h3>
+                  <p>输入第一个观众 ID 开始排队</p>
+                </div>
+                <ol id="queue-list" class="queue-list" aria-live="polite"></ol>
+              </div>
+            </section>
+
+            <section class="content-card" data-content-section="title" aria-labelledby="title-heading">
+              <header class="content-card-header">
+                <span class="block-index">02</span>
+                <div>
+                  <h2 id="title-heading">队列标题</h2>
+                  <p>Overlay 顶部左侧的固定标题</p>
+                </div>
+                <button class="section-select-button" type="button" data-select-section="title" aria-pressed="false">编辑字体</button>
+              </header>
+              <div class="fixed-content-preview">
+                <span>显示内容</span>
+                <strong>等候队列</strong>
+              </div>
+            </section>
+
+            <section class="content-card" data-content-section="message" aria-labelledby="message-heading">
+              <header class="content-card-header">
+                <span class="block-index">03</span>
+                <div>
+                  <h2 id="message-heading">Overlay 消息</h2>
+                  <p>位于标题下方，留空时自动隐藏</p>
+                </div>
+                <button class="section-select-button" type="button" data-select-section="message" aria-pressed="false">编辑字体</button>
+              </header>
+              <form id="message-form" class="content-form">
+                <label class="field-label" for="overlay-message-input">消息内容</label>
+                <div class="input-actions">
+                  <input id="overlay-message-input" name="message" maxlength="120" autocomplete="off" placeholder="输入消息内容" />
+                  <button class="primary-button" type="submit">保存</button>
+                  <button id="clear-message-button" class="secondary-button" type="button">清空</button>
+                </div>
+              </form>
+            </section>
+
+            <section class="content-card" data-content-section="stopped" aria-labelledby="stop-heading">
+              <header class="content-card-header">
+                <span class="block-index">04</span>
+                <div>
+                  <h2 id="stop-heading">“不排了”提示</h2>
+                  <p>Overlay 标题右侧的醒目状态横幅</p>
+                </div>
+                <div class="header-actions">
+                  <button class="section-select-button" type="button" data-select-section="stopped" aria-pressed="false">编辑字体</button>
+                  <button id="stop-toggle" class="toggle-button" type="button" role="switch" aria-checked="false">
+                    <span class="toggle-track" aria-hidden="true"><span class="toggle-thumb"></span></span>
+                    <span id="stop-toggle-label">已关闭</span>
+                  </button>
+                </div>
+              </header>
+            </section>
           </div>
-          <form id="message-form">
-            <label class="sr-only" for="overlay-message-input">Overlay 消息内容</label>
-            <input id="overlay-message-input" name="message" maxlength="120" autocomplete="off" placeholder="输入消息内容" />
-            <button class="primary-button" type="submit">保存消息</button>
-            <button id="clear-message-button" class="secondary-button" type="button">清空</button>
-          </form>
-        </section>
 
-        <section class="stop-control" aria-labelledby="stop-heading">
-          <div>
-            <h2 id="stop-heading">“不排了”提示</h2>
-            <p>开启后，Overlay 标题右侧会显示“不排了”</p>
-          </div>
-          <button id="stop-toggle" class="toggle-button" type="button" role="switch" aria-checked="false">
-            <span class="toggle-track" aria-hidden="true"><span class="toggle-thumb"></span></span>
-            <span id="stop-toggle-label">已关闭</span>
-          </button>
-        </section>
-
-        <section class="queue-section" aria-labelledby="queue-heading">
-          <div class="section-heading">
-            <div>
-              <h2 id="queue-heading">当前队列</h2>
-              <p><span id="queue-count">0</span> 位观众正在等待</p>
+          <aside class="style-panel" aria-labelledby="style-panel-heading">
+            <div class="style-panel-header">
+              <span class="section-kicker">复用编辑器</span>
+              <h2 id="style-panel-heading">字体样式</h2>
+              <p>当前编辑：<strong id="selected-style-label">队列内容</strong></p>
             </div>
-            <button id="dequeue-button" class="secondary-button" type="button">当前观众出队</button>
-          </div>
-
-          <div id="empty-state" class="empty-state">
-            <span class="empty-icon" aria-hidden="true">◇</span>
-            <h3>队列还是空的</h3>
-            <p>从上方输入第一个观众 ID 吧</p>
-          </div>
-          <ol id="queue-list" class="queue-list" aria-live="polite"></ol>
-        </section>
+            <div id="typography-editor" class="typography-editor" data-typography-section="queue"></div>
+            <p class="style-panel-tip">选择左侧任一内容块，即可在这里调整对应字体。</p>
+          </aside>
+        </div>
       </main>
     </div>
     <div id="toast-region" class="toast-region" aria-live="assertive"></div>

@@ -1,9 +1,16 @@
 import { randomUUID } from "node:crypto";
 import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
-import { QueueStore, ValidationError, type PersistedQueueState, type QueueState } from "./queue-store.js";
+import {
+  normalizeTypography,
+  QueueStore,
+  ValidationError,
+  type PersistedQueueState,
+  type QueueState,
+} from "./queue-store.js";
 
-const formatVersion = 1;
+const formatVersion = 3;
+const supportedFormatVersions = new Set([1, 2, formatVersion]);
 const defaultProfileId = "default";
 
 interface StoredProfile {
@@ -204,7 +211,7 @@ function parseStoredData(raw: string): StoredData {
   } catch {
     throw new Error("Profile 数据文件不是有效的 JSON");
   }
-  if (!isRecord(value) || value.version !== formatVersion || !Array.isArray(value.profiles)) {
+  if (!isRecord(value) || typeof value.version !== "number" || !supportedFormatVersions.has(value.version) || !Array.isArray(value.profiles)) {
     throw new Error("Profile 数据文件格式无效或版本不受支持");
   }
   const profiles = value.profiles.map(parseProfile);
@@ -234,7 +241,13 @@ function parseProfile(value: unknown): StoredProfile {
   return {
     id: value.id,
     name: value.name,
-    queue: { items, isQueueStopped: queue.isQueueStopped, message: queue.message, revision: queue.revision },
+    queue: {
+      items,
+      isQueueStopped: queue.isQueueStopped,
+      message: queue.message,
+      typography: normalizeTypography(queue.typography),
+      revision: queue.revision,
+    },
   };
 }
 
