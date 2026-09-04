@@ -5,11 +5,21 @@ import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createOverlayServer } from "./server.js";
+import {
+  disableStartup,
+  enableStartup,
+  isStartupCommand,
+  startupStatus,
+  startupTaskName,
+  startupUrl,
+  StartupCommandError,
+} from "./startup.js";
 
 export interface CliOptions {
   host: string;
   port: number;
   dataFile: string;
+  startupToken?: string;
 }
 
 const packageDirectory = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -40,6 +50,7 @@ export function parseCliOptions(args: string[], environment: NodeJS.ProcessEnv =
     else if (argument.startsWith("--port=")) options.port = parsePort(argument.slice("--port=".length));
     else if (argument === "--data-file") options.dataFile = resolve(requiredValue(args, ++index, "--data-file"));
     else if (argument.startsWith("--data-file=")) options.dataFile = resolve(argument.slice("--data-file=".length));
+    else if (argument === "--startup-token") options.startupToken = startupToken(requiredValue(args, ++index, "--startup-token"));
     else throw new CliArgumentError(`未知参数：${argument}`);
   }
 
@@ -57,8 +68,41 @@ export async function runCli(args: string[] = process.argv.slice(2)): Promise<vo
     return;
   }
 
+  const command = args[0];
+  if (isStartupCommand(command)) {
+    if (args.length !== 1) throw new CliArgumentError(`${command} 不接受额外参数`);
+    const startupRuntime = {
+      cliPath: fileURLToPath(import.meta.url),
+      dataFile: defaultDataFile(),
+    };
+    if (command === "startup-enable") {
+      const result = await enableStartup(startupRuntime);
+      console.log("静默启动已启用。");
+      console.log(`计划任务：${startupTaskName}`);
+      console.log(result.alreadyAvailable
+        ? `Overlay 服务已在运行：${startupUrl}`
+        : `Overlay 服务已启动：${startupUrl}`);
+      return;
+    }
+    if (command === "startup-disable") {
+      const result = await disableStartup(startupRuntime);
+      console.log(result.wasEnabled ? "静默启动已关闭。" : "静默启动原本未启用。");
+      console.log(result.available
+        ? "Overlay 服务仍可访问，可能存在独立的前台实例。"
+        : "Overlay 服务已停止。");
+      return;
+    }
+    const status = await startupStatus(startupRuntime);
+    console.log(`静默启动：${status.enabled ? "已启用" : "未启用"}`);
+    console.log(`Overlay 服务：${status.available ? `可访问（${startupUrl}）` : "未运行"}`);
+    return;
+  }
+
   const options = parseCliOptions(args);
-  const { server, sockets } = await createOverlayServer({ dataFile: options.dataFile });
+  const { server, sockets } = await createOverlayServer({
+    dataFile: options.dataFile,
+    shutdownToken: options.startupToken,
+  });
   await new Promise<void>((resolveListen, reject) => {
     server.once("error", reject);
     server.listen(options.port, options.host, () => {
@@ -80,6 +124,7 @@ export async function runCli(args: string[] = process.argv.slice(2)): Promise<vo
     isShuttingDown = true;
     process.off("SIGINT", handleSignal);
     process.off("SIGTERM", handleSignal);
+    server.off("shutdownRequested", handleSignal);
     console.log("\n正在停止 OBS Live Overlay…");
     for (const socket of sockets.clients) socket.terminate();
     await new Promise<void>((resolveClose) => server.close(() => resolveClose()));
@@ -90,6 +135,7 @@ export async function runCli(args: string[] = process.argv.slice(2)): Promise<vo
   const handleSignal = () => { void shutdown(); };
   process.once("SIGINT", handleSignal);
   process.once("SIGTERM", handleSignal);
+  server.once("shutdownRequested", handleSignal);
 }
 
 function parsePort(value: string): number {
@@ -111,6 +157,12 @@ function helpText(): string {
 
 用法：
   obs-live-overlay [选项]
+  obs-live-overlay <命令>
+
+命令（Windows 11）：
+  startup-enable        启用登录后静默启动，并立即启动服务
+  startup-disable       停止服务并关闭静默启动
+  startup-status        查看静默启动及 Overlay 服务状态
 
 选项：
   -p, --port <端口>       HTTP 服务端口，默认 3000
@@ -136,12 +188,19 @@ export function isMainModule(
   }
 }
 
+function startupToken(value: string): string {
+  if (!/^[0-9a-f]{64}$/.test(value)) throw new CliArgumentError("内部启动令牌无效");
+  return value;
+}
+
 if (isMainModule(import.meta.url, process.argv[1])) {
   runCli().catch((error) => {
     if ((error as NodeJS.ErrnoException).code === "EADDRINUSE") {
       console.error("启动失败：端口已被占用，请使用 --port 指定其他端口。");
     } else if (error instanceof CliArgumentError) {
       console.error(`参数错误：${error.message}\n使用 --help 查看帮助。`);
+    } else if (error instanceof StartupCommandError) {
+      console.error(`静默启动操作失败：${error.message}`);
     } else {
       console.error("OBS Live Overlay 启动失败：", error);
     }

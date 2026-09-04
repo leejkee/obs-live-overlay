@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { describe, it } from "node:test";
 import { pathToFileURL } from "node:url";
 import { CliArgumentError, defaultDataFile, isMainModule, parseCliOptions } from "../src/cli.js";
+import { isStartupCommand } from "../src/startup.js";
 
 describe("CLI", () => {
   it("解析 host、port 和数据文件参数", () => {
@@ -31,6 +32,12 @@ describe("CLI", () => {
     assert.throws(() => parseCliOptions(["--unknown"], {}), CliArgumentError);
     assert.throws(() => parseCliOptions(["--port"], {}), CliArgumentError);
     assert.throws(() => parseCliOptions(["--port", "70000"], {}), CliArgumentError);
+    assert.throws(() => parseCliOptions(["--startup-token", "invalid"], {}), CliArgumentError);
+  });
+
+  it("接受静默实例使用的内部关闭令牌", () => {
+    const token = "a".repeat(64);
+    assert.equal(parseCliOptions(["--startup-token", token], {}).startupToken, token);
   });
 
   it("默认数据文件位于独立的应用数据目录", () => {
@@ -44,5 +51,12 @@ describe("CLI", () => {
     const canonicalize = (path: string) => path === commandLink ? modulePath : path;
     assert.equal(isMainModule(pathToFileURL(modulePath).href, commandLink, canonicalize), true);
     assert.equal(isMainModule(pathToFileURL(modulePath).href, undefined, canonicalize), false);
+  });
+
+  it("识别静默启动子命令", () => {
+    assert.equal(isStartupCommand("startup-enable"), true);
+    assert.equal(isStartupCommand("startup-disable"), true);
+    assert.equal(isStartupCommand("startup-status"), true);
+    assert.equal(isStartupCommand("start"), false);
   });
 });
