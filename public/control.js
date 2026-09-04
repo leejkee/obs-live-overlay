@@ -22,7 +22,27 @@ const elements = {
   typographySectionLabel: document.querySelector("#selected-style-label"),
   contentSections: [...document.querySelectorAll("[data-content-section]")],
   sectionSelectors: [...document.querySelectorAll("[data-select-section]")],
+  themeOptions: [...document.querySelectorAll("[data-theme-option]")],
 };
+
+const themeStorageKey = "obs-live-overlay:control-theme";
+
+function setTheme(theme, persist = false) {
+  const selectedTheme = theme === "light" ? "light" : "dark";
+  document.documentElement.dataset.theme = selectedTheme;
+  for (const option of elements.themeOptions) {
+    option.setAttribute("aria-pressed", String(option.dataset.themeOption === selectedTheme));
+  }
+  if (persist) {
+    try { localStorage.setItem(themeStorageKey, selectedTheme); } catch { /* 主题仍可在当前页面生效。 */ }
+  }
+}
+
+for (const option of elements.themeOptions) {
+  option.addEventListener("click", () => setTheme(option.dataset.themeOption, true));
+}
+
+setTheme(document.documentElement.dataset.theme);
 
 const defaultTypography = {
   title: { fontFamily: "system", fontSize: 30, bold: true, italic: false, textAlign: "left", textColor: "#ffffff", outlineColor: "#050505", outlineWidth: 1 },

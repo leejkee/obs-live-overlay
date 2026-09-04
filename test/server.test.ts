@@ -27,10 +27,11 @@ describe("Overlay Service", () => {
   });
 
   it("提供控制台和 Overlay 页面", async () => {
-    const [control, overlay, overlayCss] = await Promise.all([
+    const [control, overlay, overlayCss, controlCss] = await Promise.all([
       fetch(`${baseUrl}/control`),
       fetch(`${baseUrl}/overlay/queue`),
       fetch(`${baseUrl}/overlay.css`),
+      fetch(`${baseUrl}/control.css`),
     ]);
     assert.equal(control.status, 200);
     const controlHtml = await control.text();
@@ -40,6 +41,8 @@ describe("Overlay Service", () => {
     assert.match(controlHtml, /data-content-section="title"/);
     assert.match(controlHtml, /data-content-section="message"/);
     assert.match(controlHtml, /data-content-section="stopped"/);
+    assert.match(controlHtml, /data-theme-option="light"/);
+    assert.match(controlHtml, /data-theme-option="dark"/);
     assert.equal(overlay.status, 200);
     const overlayHtml = await overlay.text();
     assert.match(overlayHtml, /queue-list/);
@@ -53,15 +56,34 @@ describe("Overlay Service", () => {
     assert.match(controlScript, /data-text-color/);
     assert.match(controlScript, /data-outline-color/);
     assert.match(controlScript, /data-outline-width/);
+    assert.match(controlScript, /obs-live-overlay:control-theme/);
+    const controlStyles = await controlCss.text();
+    assert.match(controlStyles, /:root\[data-theme="light"\]/);
+    assert.doesNotMatch(controlStyles, /gradient|box-shadow|backdrop-filter|animation|transition/i);
+    for (const match of controlStyles.matchAll(/#([0-9a-f]{3}|[0-9a-f]{6})\b/gi)) {
+      const channels = match[1].length === 3
+        ? [...match[1]].map((channel) => Number.parseInt(channel.repeat(2), 16))
+        : (match[1].match(/.{2}/g) ?? []).map((channel) => Number.parseInt(channel, 16));
+      assert.equal(new Set(channels).size, 1, `控制台主题包含非灰度颜色 ${match[0]}`);
+    }
+    for (const match of controlStyles.matchAll(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/gi)) {
+      assert.equal(match[1], match[2], `控制台主题包含非灰度颜色 ${match[0]}`);
+      assert.equal(match[2], match[3], `控制台主题包含非灰度颜色 ${match[0]}`);
+    }
     const overlayStyles = await overlayCss.text();
     assert.match(overlayStyles, /\.overlay\s*\{[^}]*background:\s*transparent;/);
-    assert.match(overlayStyles, /--current-accent:\s*#ff7a00/);
+    assert.match(overlayStyles, /--current-background:\s*rgba\(0,\s*0,\s*0,\s*\.45\)/);
+    assert.match(overlayStyles, /\.queue-item\.current\s*\{[^}]*background:\s*var\(--current-background\)/);
+    assert.doesNotMatch(overlayStyles, /\.queue-item\.current\s*\{[^}]*border:\s*3px/);
     assert.match(overlayStyles, /\.queue-header\s*\{[^}]*grid-template-columns:\s*minmax\(118px,\s*2fr\)\s*minmax\(0,\s*3fr\)/);
     assert.match(overlayStyles, /\.stopped-banner\s*\{[^}]*background:\s*transparent;/);
     assert.match(overlayStyles, /\.stopped-banner\s*\{[^}]*border:\s*0;/);
     assert.doesNotMatch(overlayStyles, /#ffd60a|#ff3b30/);
     assert.match(overlayStyles, /-webkit-text-stroke/);
     assert.doesNotMatch(overlayStyles, /linear-gradient|filter:\s*blur|box-shadow/);
+    assert.match(overlayStyles, /@keyframes queue-insert/);
+    assert.match(overlayStyles, /@keyframes queue-eject/);
+    assert.doesNotMatch(overlayStyles, /transition|will-change/i);
   });
 
   it("通过 REST 修改状态并用 WebSocket 广播", async () => {

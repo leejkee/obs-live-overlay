@@ -4,6 +4,12 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>直播叠加层控制台</title>
+    <script>
+      try {
+        const theme = localStorage.getItem("obs-live-overlay:control-theme");
+        if (theme === "light" || theme === "dark") document.documentElement.dataset.theme = theme;
+      } catch { /* 无法访问本地存储时继续使用默认深色主题。 */ }
+    </script>
     <link rel="stylesheet" href="/control.css" />
   </head>
   <body>
@@ -19,6 +25,13 @@
             <span class="live-dot"></span><span>等候队列</span><span id="nav-count" class="nav-count">0</span>
           </button>
         </nav>
+        <div class="theme-setting">
+          <span class="theme-label">界面主题</span>
+          <div class="theme-options" role="group" aria-label="控制台主题">
+            <button type="button" data-theme-option="light" aria-pressed="false">浅色</button>
+            <button type="button" data-theme-option="dark" aria-pressed="true">深色</button>
+          </div>
+        </div>
         <div class="sidebar-foot">
           <span id="connection-dot" class="connection-dot"></span>
           <span id="connection-label">正在连接服务</span>

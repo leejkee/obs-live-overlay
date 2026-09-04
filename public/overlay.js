@@ -33,31 +33,38 @@ function update(nextState) {
   stoppedBanner.hidden = !nextState.isQueueStopped;
   const nextItems = nextState.items;
   const nextIds = new Set(nextItems.map((item) => item.id));
-  const currentNodes = new Map([...list.querySelectorAll(".queue-item:not(.leaving)")].map((node) => [node.dataset.id, node]));
-  const oldPositions = new Map([...currentNodes].map(([id, node]) => [id, node.getBoundingClientRect()]));
+  const currentNodes = new Map(
+    [...list.querySelectorAll(".queue-item:not(.ejecting)")].map((node) => [node.dataset.id, node]),
+  );
+  const oldPositions = new Map(
+    [...currentNodes].map(([id, node]) => [id, node.getBoundingClientRect()]),
+  );
   const listRect = list.getBoundingClientRect();
 
   for (const [id, node] of currentNodes) {
-    if (!nextIds.has(id)) {
-      const rect = oldPositions.get(id);
-      const clone = node.cloneNode(true);
-      clone.classList.add("leaving");
-      clone.style.top = `${rect.top - listRect.top}px`;
-      clone.style.height = `${rect.height}px`;
-      clone.addEventListener("animationend", () => clone.remove(), { once: true });
-      list.append(clone);
-      node.remove();
-      currentNodes.delete(id);
-    }
+    if (nextIds.has(id)) continue;
+    const rect = oldPositions.get(id);
+    const clone = node.cloneNode(true);
+    clone.classList.remove("inserting");
+    clone.classList.add("ejecting");
+    clone.style.top = `${rect.top - listRect.top}px`;
+    clone.style.height = `${rect.height}px`;
+    clone.addEventListener("animationend", () => clone.remove(), { once: true });
+    setTimeout(() => clone.remove(), 500);
+    list.append(clone);
+    node.remove();
+    currentNodes.delete(id);
   }
 
   const fragment = document.createDocumentFragment();
-  const newIds = new Set();
   nextItems.forEach((item, index) => {
     let node = currentNodes.get(item.id);
     if (!node) {
       node = createItem(item);
-      newIds.add(item.id);
+      if (hasRendered) {
+        node.classList.add("inserting");
+        node.addEventListener("animationend", () => node.classList.remove("inserting"), { once: true });
+      }
     }
     node.classList.toggle("current", item.id === nextState.currentId);
     node.querySelector(".queue-position").textContent = String(index + 1).padStart(2, "0");
@@ -66,20 +73,16 @@ function update(nextState) {
   });
   list.prepend(fragment);
 
-  for (const item of nextItems) {
-    const node = list.querySelector(`[data-id="${CSS.escape(item.id)}"]:not(.leaving)`);
-    if (!node) continue;
-    if (newIds.has(item.id)) {
-      if (hasRendered) node.classList.add("entering");
-      continue;
+  if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    for (const [id, node] of currentNodes) {
+      const oldRect = oldPositions.get(id);
+      const newRect = node.getBoundingClientRect();
+      if (!oldRect || oldRect.top === newRect.top) continue;
+      node.animate(
+        [{ transform: `translateY(${oldRect.top - newRect.top}px)` }, { transform: "translateY(0)" }],
+        { duration: 260, easing: "cubic-bezier(.2, .8, .2, 1)" },
+      );
     }
-    const oldRect = oldPositions.get(item.id);
-    const newRect = node.getBoundingClientRect();
-    if (!oldRect || oldRect.top === newRect.top) continue;
-    node.animate(
-      [{ transform: `translateY(${oldRect.top - newRect.top}px)` }, { transform: "translateY(0)" }],
-      { duration: 420, easing: "cubic-bezier(.2,.8,.2,1)" },
-    );
   }
 
   empty.hidden = nextItems.length > 0;
