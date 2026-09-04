@@ -6,6 +6,10 @@ const elements = {
   count: document.querySelector("#queue-count"),
   navCount: document.querySelector("#nav-count"),
   dequeue: document.querySelector("#dequeue-button"),
+  profileSelect: document.querySelector("#profile-select"),
+  createProfile: document.querySelector("#create-profile-button"),
+  renameProfile: document.querySelector("#rename-profile-button"),
+  deleteProfile: document.querySelector("#delete-profile-button"),
   messageForm: document.querySelector("#message-form"),
   messageInput: document.querySelector("#overlay-message-input"),
   clearMessage: document.querySelector("#clear-message-button"),
@@ -17,6 +21,7 @@ const elements = {
 };
 
 let state = { items: [], currentId: null, isQueueStopped: false, message: "", revision: 0 };
+let profilesState = { profiles: [], activeProfileId: "" };
 let socket;
 let reconnectTimer;
 let reconnectDelay = 500;
@@ -45,6 +50,26 @@ function setState(nextState) {
   if (document.activeElement !== elements.messageInput) elements.messageInput.value = state.message ?? "";
   elements.clearMessage.disabled = !(state.message ?? "");
   elements.list.replaceChildren(...state.items.map(createRow));
+}
+
+function setProfiles(nextProfiles, activeProfileId) {
+  profilesState = { profiles: nextProfiles, activeProfileId };
+  elements.profileSelect.replaceChildren(...nextProfiles.map((profile) => {
+    const option = document.createElement("option");
+    option.value = profile.id;
+    option.textContent = profile.name;
+    return option;
+  }));
+  elements.profileSelect.value = activeProfileId;
+  const activeProfile = nextProfiles.find((profile) => profile.id === activeProfileId);
+  elements.renameProfile.disabled = !activeProfile;
+  elements.deleteProfile.disabled = !activeProfile || activeProfile.isDefault;
+}
+
+function applyServerMessage(message) {
+  if (message.type !== "state.updated" || message.overlayId !== "queue") return;
+  setProfiles(message.profiles, message.activeProfileId);
+  setState(message.state);
 }
 
 function createRow(item, index) {
@@ -122,6 +147,52 @@ elements.stopToggle.addEventListener("click", () => {
   }));
 });
 
+elements.profileSelect.addEventListener("change", () => {
+  profileAct(() => request("/api/profiles/active", {
+    method: "PUT",
+    body: JSON.stringify({ profileId: elements.profileSelect.value }),
+  }));
+});
+
+elements.createProfile.addEventListener("click", () => {
+  const name = window.prompt("请输入新 Profile 名称");
+  if (name !== null) {
+    profileAct(() => request("/api/profiles", {
+      method: "POST",
+      body: JSON.stringify({ name }),
+    }));
+  }
+});
+
+elements.renameProfile.addEventListener("click", () => {
+  const profile = profilesState.profiles.find((item) => item.id === profilesState.activeProfileId);
+  if (!profile) return;
+  const name = window.prompt("请输入新的 Profile 名称", profile.name);
+  if (name !== null) {
+    profileAct(() => request(`/api/profiles/${encodeURIComponent(profile.id)}`, {
+      method: "PATCH",
+      body: JSON.stringify({ name }),
+    }));
+  }
+});
+
+elements.deleteProfile.addEventListener("click", () => {
+  const profile = profilesState.profiles.find((item) => item.id === profilesState.activeProfileId);
+  if (!profile || profile.isDefault) return;
+  if (window.confirm(`确定删除 Profile“${profile.name}”及其全部队列数据吗？`)) {
+    profileAct(() => request(`/api/profiles/${encodeURIComponent(profile.id)}`, { method: "DELETE" }));
+  }
+});
+
+async function profileAct(operation) {
+  try {
+    applyServerMessage(await operation());
+  } catch (error) {
+    toast(error instanceof Error ? error.message : "Profile 操作失败");
+    setProfiles(profilesState.profiles, profilesState.activeProfileId);
+  }
+}
+
 function connect() {
   clearTimeout(reconnectTimer);
   setConnection("connecting");
@@ -134,7 +205,7 @@ function connect() {
   socket.addEventListener("message", (event) => {
     try {
       const message = JSON.parse(event.data);
-      if (message.type === "state.updated" && message.overlayId === "queue") setState(message.state);
+      applyServerMessage(message);
     } catch { /* 保留最后一次正确状态。 */ }
   });
   socket.addEventListener("close", () => {
@@ -162,5 +233,11 @@ function toast(message) {
   setTimeout(() => item.remove(), 3500);
 }
 
-request("/api/overlays/queue/state").then(setState).catch((error) => toast(error.message));
+Promise.all([
+  request("/api/overlays/queue/state"),
+  request("/api/profiles"),
+]).then(([queueState, profileState]) => {
+  setProfiles(profileState.profiles, profileState.activeProfileId);
+  setState(queueState);
+}).catch((error) => toast(error.message));
 connect();

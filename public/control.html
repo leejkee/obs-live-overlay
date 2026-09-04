@@ -35,6 +35,20 @@
           <a class="preview-link" href="/overlay/queue" target="_blank" rel="noreferrer">打开 Overlay ↗</a>
         </header>
 
+        <section class="profile-control" aria-labelledby="profile-heading">
+          <div>
+            <h2 id="profile-heading">Queue Profile</h2>
+            <p>选择要加载到 Queue Overlay 的独立配置</p>
+          </div>
+          <div class="profile-actions">
+            <label class="sr-only" for="profile-select">当前 Profile</label>
+            <select id="profile-select" aria-label="当前 Profile"></select>
+            <button id="create-profile-button" class="secondary-button" type="button">新建</button>
+            <button id="rename-profile-button" class="secondary-button" type="button">重命名</button>
+            <button id="delete-profile-button" class="danger-button" type="button">删除</button>
+          </div>
+        </section>
+
         <section class="add-card" aria-labelledby="add-heading">
           <div>
             <h2 id="add-heading">加入排队</h2>

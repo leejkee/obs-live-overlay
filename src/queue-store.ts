@@ -10,16 +10,39 @@ export interface QueueState {
   revision: number;
 }
 
+export interface PersistedQueueState {
+  items: QueueItem[];
+  isQueueStopped: boolean;
+  message: string;
+  revision: number;
+}
+
 export class QueueStore {
-  readonly #items: QueueItem[] = [];
-  #isQueueStopped = false;
-  #message = "";
-  #revision = 0;
+  readonly #items: QueueItem[];
+  #isQueueStopped: boolean;
+  #message: string;
+  #revision: number;
+
+  constructor(initial?: PersistedQueueState) {
+    this.#items = initial?.items.map((item) => ({ ...item })) ?? [];
+    this.#isQueueStopped = initial?.isQueueStopped ?? false;
+    this.#message = initial?.message ?? "";
+    this.#revision = initial?.revision ?? 0;
+  }
 
   snapshot(): QueueState {
     return {
       items: this.#items.map((item) => ({ ...item })),
       currentId: this.#items[0]?.id ?? null,
+      isQueueStopped: this.#isQueueStopped,
+      message: this.#message,
+      revision: this.#revision,
+    };
+  }
+
+  persistedState(): PersistedQueueState {
+    return {
+      items: this.#items.map((item) => ({ ...item })),
       isQueueStopped: this.#isQueueStopped,
       message: this.#message,
       revision: this.#revision,

@@ -3,7 +3,8 @@ import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { dirname, extname, join } from "node:path";
 import { WebSocket, WebSocketServer } from "ws";
-import { ConflictError, NotFoundError, QueueStore, ValidationError } from "./queue-store.js";
+import { ConflictError, NotFoundError, ValidationError } from "./queue-store.js";
+import { ProfileConflictError, ProfileManager, ProfileNotFoundError } from "./profile-manager.js";
 
 const currentDirectory = dirname(fileURLToPath(import.meta.url));
 const publicDirectory = join(currentDirectory, "..", "public");
@@ -16,11 +17,11 @@ const mimeTypes: Record<string, string> = {
   ".svg": "image/svg+xml",
 };
 
-export function createOverlayServer() {
-  const queue = new QueueStore();
+export async function createOverlayServer(options: { dataFile?: string } = {}) {
+  const profiles = await ProfileManager.load(options.dataFile ?? join(currentDirectory, "..", "data", "profiles.json"));
   const server = createServer(async (request, response) => {
     try {
-      await route(request, response, queue);
+      await route(request, response, profiles);
     } catch (error) {
       handleError(error, response);
     }
@@ -28,7 +29,7 @@ export function createOverlayServer() {
   const sockets = new WebSocketServer({ noServer: true });
 
   const broadcast = () => {
-    const message = JSON.stringify(stateMessage(queue));
+    const message = JSON.stringify(stateMessage(profiles));
     for (const client of sockets.clients) {
       if (client.readyState === WebSocket.OPEN) client.send(message);
     }
@@ -44,10 +45,10 @@ export function createOverlayServer() {
   });
 
   sockets.on("connection", (socket) => {
-    socket.send(JSON.stringify(stateMessage(queue)));
+    socket.send(JSON.stringify(stateMessage(profiles)));
   });
 
-  async function route(request: IncomingMessage, response: ServerResponse, store: QueueStore) {
+  async function route(request: IncomingMessage, response: ServerResponse, manager: ProfileManager) {
     const method = request.method ?? "GET";
     const url = new URL(request.url ?? "/", "http://localhost");
 
@@ -55,30 +56,57 @@ export function createOverlayServer() {
       return json(response, 200, [{ id: overlayId, type: "queue", title: "等候队列" }]);
     }
     if (method === "GET" && url.pathname === `/api/overlays/${overlayId}/state`) {
-      return json(response, 200, store.snapshot());
+      return json(response, 200, manager.activeQueueState());
+    }
+    if (method === "GET" && url.pathname === "/api/profiles") {
+      return json(response, 200, manager.profilesSnapshot());
+    }
+    if (method === "POST" && url.pathname === "/api/profiles") {
+      const body = await readJson(request);
+      await manager.createProfile(body.name);
+      broadcast();
+      return json(response, 201, stateMessage(manager));
+    }
+    if (method === "PUT" && url.pathname === "/api/profiles/active") {
+      const body = await readJson(request);
+      await manager.activateProfile(body.profileId);
+      broadcast();
+      return json(response, 200, stateMessage(manager));
+    }
+    const profileMatch = url.pathname.match(/^\/api\/profiles\/([^/]+)$/);
+    if (profileMatch && method === "PATCH") {
+      const body = await readJson(request);
+      await manager.renameProfile(decodeURIComponent(profileMatch[1]), body.name);
+      broadcast();
+      return json(response, 200, stateMessage(manager));
+    }
+    if (profileMatch && method === "DELETE") {
+      await manager.deleteProfile(decodeURIComponent(profileMatch[1]));
+      broadcast();
+      return json(response, 200, stateMessage(manager));
     }
     if (method === "POST" && url.pathname === `/api/overlays/${overlayId}/items`) {
       const body = await readJson(request);
-      store.enqueue(body.id);
+      await manager.updateActiveQueue((queue) => { queue.enqueue(body.id); });
       broadcast();
-      return json(response, 201, store.snapshot());
+      return json(response, 201, manager.activeQueueState());
     }
     if (method === "POST" && url.pathname === `/api/overlays/${overlayId}/dequeue`) {
-      store.dequeue();
+      await manager.updateActiveQueue((queue) => { queue.dequeue(); });
       broadcast();
-      return json(response, 200, store.snapshot());
+      return json(response, 200, manager.activeQueueState());
     }
     if (method === "PUT" && url.pathname === `/api/overlays/${overlayId}/stopped`) {
       const body = await readJson(request);
-      store.setQueueStopped(body.stopped);
+      await manager.updateActiveQueue((queue) => { queue.setQueueStopped(body.stopped); });
       broadcast();
-      return json(response, 200, store.snapshot());
+      return json(response, 200, manager.activeQueueState());
     }
     if (method === "PUT" && url.pathname === `/api/overlays/${overlayId}/message`) {
       const body = await readJson(request);
-      store.setMessage(body.message);
+      await manager.updateActiveQueue((queue) => { queue.setMessage(body.message); });
       broadcast();
-      return json(response, 200, store.snapshot());
+      return json(response, 200, manager.activeQueueState());
     }
 
     if (method !== "GET" && method !== "HEAD") throw new NotFoundError("接口不存在");
@@ -95,11 +123,19 @@ export function createOverlayServer() {
     throw new NotFoundError("页面不存在");
   }
 
-  return { server, queue, sockets };
+  return { server, profiles, sockets };
 }
 
-function stateMessage(queue: QueueStore) {
-  return { type: "state.updated", overlayId, state: queue.snapshot() };
+function stateMessage(profiles: ProfileManager) {
+  const profilesState = profiles.profilesSnapshot();
+  return {
+    type: "state.updated",
+    overlayId,
+    activeProfileId: profilesState.activeProfileId,
+    profiles: profilesState.profiles,
+    profile: profiles.activeProfile(),
+    state: profiles.activeQueueState(),
+  };
 }
 
 async function readJson(request: IncomingMessage): Promise<Record<string, any>> {
@@ -152,18 +188,25 @@ function handleError(error: unknown, response: ServerResponse) {
   if (response.headersSent) return response.end();
   if (error instanceof ValidationError) return json(response, 400, { error: error.message });
   if (error instanceof ConflictError) return json(response, 409, { error: error.message });
+  if (error instanceof ProfileConflictError) return json(response, 409, { error: error.message });
+  if (error instanceof ProfileNotFoundError) return json(response, 404, { error: error.message });
   if (error instanceof NotFoundError) return json(response, 404, { error: error.message });
   console.error(error);
   return json(response, 500, { error: "服务内部错误" });
 }
 
-function start() {
+async function start() {
   const host = process.env.HOST ?? "127.0.0.1";
   const port = Number(process.env.PORT ?? 3000);
-  const { server } = createOverlayServer();
+  const { server } = await createOverlayServer({ dataFile: process.env.OBS_OVERLAY_DATA_FILE });
   server.listen(port, host, () => {
     console.log(`OBS Live Overlay 已启动：http://${host}:${port}/control`);
   });
 }
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) start();
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+  start().catch((error) => {
+    console.error("OBS Live Overlay 启动失败：", error);
+    process.exitCode = 1;
+  });
+}
