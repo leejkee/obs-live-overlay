@@ -1,4 +1,5 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import { timingSafeEqual } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { dirname, extname, join } from "node:path";
@@ -17,11 +18,13 @@ const mimeTypes: Record<string, string> = {
   ".svg": "image/svg+xml",
 };
 
-export async function createOverlayServer(options: { dataFile?: string } = {}) {
+export async function createOverlayServer(options: { dataFile?: string; shutdownToken?: string } = {}) {
   const profiles = await ProfileManager.load(options.dataFile ?? join(currentDirectory, "..", "data", "profiles.json"));
   const server = createServer(async (request, response) => {
     try {
-      await route(request, response, profiles);
+      await route(request, response, profiles, options.shutdownToken, () => {
+        setImmediate(() => server.emit("shutdownRequested"));
+      });
     } catch (error) {
       handleError(error, response);
     }
@@ -48,7 +51,13 @@ export async function createOverlayServer(options: { dataFile?: string } = {}) {
     socket.send(JSON.stringify(stateMessage(profiles)));
   });
 
-  async function route(request: IncomingMessage, response: ServerResponse, manager: ProfileManager) {
+  async function route(
+    request: IncomingMessage,
+    response: ServerResponse,
+    manager: ProfileManager,
+    shutdownToken: string | undefined,
+    requestShutdown: () => void,
+  ) {
     const method = request.method ?? "GET";
     const url = new URL(request.url ?? "/", "http://localhost");
 
@@ -60,6 +69,14 @@ export async function createOverlayServer(options: { dataFile?: string } = {}) {
     }
     if (method === "GET" && url.pathname === "/api/profiles") {
       return json(response, 200, manager.profilesSnapshot());
+    }
+    if (method === "POST" && url.pathname === "/api/system/shutdown") {
+      if (!shutdownToken || !validShutdownToken(request.headers.authorization, shutdownToken)) {
+        return json(response, 404, { error: "接口不存在" });
+      }
+      json(response, 202, { stopping: true });
+      requestShutdown();
+      return;
     }
     if (method === "POST" && url.pathname === "/api/profiles") {
       const body = await readJson(request);
@@ -139,6 +156,13 @@ export async function createOverlayServer(options: { dataFile?: string } = {}) {
   }
 
   return { server, profiles, sockets };
+}
+
+function validShutdownToken(authorization: string | undefined, expected: string): boolean {
+  const actual = authorization?.startsWith("Bearer ") ? authorization.slice("Bearer ".length) : "";
+  const actualBuffer = Buffer.from(actual);
+  const expectedBuffer = Buffer.from(expected);
+  return actualBuffer.length === expectedBuffer.length && timingSafeEqual(actualBuffer, expectedBuffer);
 }
 
 function stateMessage(profiles: ProfileManager) {

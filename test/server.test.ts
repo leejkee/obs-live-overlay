@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { once } from "node:events";
 import { after, before, describe, it } from "node:test";
 import type { AddressInfo } from "node:net";
 import { mkdtemp, rm } from "node:fs/promises";
@@ -250,6 +251,36 @@ describe("Overlay Service", () => {
     const deletedResponse = await fetch(`${baseUrl}/api/profiles/${profileId}`, { method: "DELETE" });
     assert.equal(deletedResponse.status, 200);
     assert.equal((await deletedResponse.json()).profiles.length, 1);
+  });
+
+  it("只允许持有静默启动令牌的请求关闭托管实例", async () => {
+    const token = "b".repeat(64);
+    const managed = await createOverlayServer({
+      dataFile: join(temporaryDirectory, "managed-profiles.json"),
+      shutdownToken: token,
+    });
+    await new Promise<void>((resolve) => managed.server.listen(0, "127.0.0.1", resolve));
+    const address = managed.server.address() as AddressInfo;
+    const shutdownUrl = `http://127.0.0.1:${address.port}/api/system/shutdown`;
+
+    const rejected = await fetch(shutdownUrl, {
+      method: "POST",
+      headers: { Authorization: "Bearer wrong" },
+    });
+    assert.equal(rejected.status, 404);
+
+    const shutdownRequested = once(managed.server, "shutdownRequested");
+    const accepted = await fetch(shutdownUrl, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    assert.equal(accepted.status, 202);
+    assert.deepEqual(await accepted.json(), { stopping: true });
+    await shutdownRequested;
+    await new Promise<void>((resolve, reject) => {
+      managed.server.close((error) => error ? reject(error) : resolve());
+    });
+    managed.sockets.close();
   });
 });
 

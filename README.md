@@ -39,6 +39,28 @@ obs-live-overlay
 
 服务以前台方式运行，按 `Ctrl+C` 停止。
 
+### Windows 静默启动
+
+Windows 11 可以将服务注册为当前用户登录后自动运行的计划任务。启用时会请求一次管理员授权并立即启动服务，后续登录无需再次授权、无需打开终端，也不会出现黑色命令窗口：
+
+```bash
+obs-live-overlay startup-enable
+```
+
+查看计划任务是否启用，以及默认地址上的 Overlay 服务是否可访问：
+
+```bash
+obs-live-overlay startup-status
+```
+
+停止后台服务并取消自动启动：
+
+```bash
+obs-live-overlay startup-disable
+```
+
+静默启动固定使用默认地址 `127.0.0.1:3000` 和默认数据文件。关闭静默启动或卸载程序不会删除队列数据。全局卸载前建议先运行 `startup-disable`；更换 Node.js 安装位置后请重新运行 `startup-enable`。
+
 ### 常用选项
 
 ```text
@@ -54,6 +76,7 @@ Windows 默认数据文件位于 `%LOCALAPPDATA%\obs-live-overlay\profiles.json`
 ## 卸载
 
 ```bash
+obs-live-overlay startup-disable
 npm uninstall --global @leejkee/obs-live-overlay
 ```
 
