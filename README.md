@@ -31,7 +31,7 @@ npm install --global @leejkee/obs-live-overlay
 ```bash
 npm install
 npm run pack:local
-npm install --global ./leejkee-obs-live-overlay-0.1.1.tgz
+npm install --global ./leejkee-obs-live-overlay-0.1.2.tgz
 ```
 
 安装后可在任意终端直接运行：
@@ -79,12 +79,12 @@ Queue 控制页支持新建、切换、重命名和删除 Profile。`default` Pr
 
 ## CI 与发布
 
-推送到 `main` 或提交 Pull Request 时，GitHub Actions 会在 Node.js 20、22、24、26 上执行类型检查、测试和构建，并额外在 Windows 环境验证。依赖安装优先复用 npm 缓存，并跳过与构建无关的审计和赞助请求。发布产物不会上传 npm Registry，而是附加到 GitHub Release，保持当前本地工具的分发方式。
+推送到 `main` 或提交 Pull Request 时，GitHub Actions 会在 Node.js 20、22、24、26 上执行类型检查、测试和构建，并额外在 Windows 环境验证。依赖安装优先复用 npm 缓存，并跳过与构建无关的审计和赞助请求。发布流程通过 npm Trusted Publishing 使用 GitHub OIDC 临时身份，不保存长期发布 Token。
 
 发布步骤：
 
 1. 使用 `npm version patch --no-git-tag-version`（或 `minor`、`major`）更新 `package.json` 和 `package-lock.json`，通过 Pull Request 合并到 `main`。
-2. 在最新的 `main` 提交上创建与包版本一致的带注释标签，例如 `git tag -a v0.1.1 -m "v0.1.1"`。
-3. 使用 `git push origin v0.1.1` 推送标签。
+2. 在最新的 `main` 提交上创建与包版本一致的带注释标签，例如 `git tag -a v0.1.2 -m "v0.1.2"`。
+3. 使用 `git push origin v0.1.2` 推送标签。
 
-标签触发的 Release 流程会再次执行完整校验，生成 `obs-live-overlay-<版本>.tgz` 及其 `.sha256` 文件，然后创建 GitHub Release。标签不是严格的 `vX.Y.Z` 格式，或与 `package.json` 中版本不一致时，发布会直接失败。
+标签触发的 Release 流程会再次执行完整校验，生成 `leejkee-obs-live-overlay-<版本>.tgz` 及其 `.sha256` 文件，创建 GitHub Release，并将同一产物发布到 npm。正式版本使用 npm 的 `latest` 标签，预发布版本使用 `next`；重复运行会跳过 npm 中已经存在的版本。标签不是严格的 `vX.Y.Z` 格式，或与 `package.json` 中版本不一致时，发布会直接失败。
