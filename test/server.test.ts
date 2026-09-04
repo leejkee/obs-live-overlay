@@ -46,6 +46,9 @@ describe("Overlay Service", () => {
     const overlayStyles = await overlayCss.text();
     assert.match(overlayStyles, /\.overlay\s*\{[^}]*background:\s*transparent;/);
     assert.match(overlayStyles, /--current-accent:\s*#ff7a00/);
+    assert.match(overlayStyles, /\.queue-header\s*\{[^}]*grid-template-columns:\s*minmax\(118px,\s*2fr\)\s*minmax\(0,\s*3fr\)/);
+    assert.match(overlayStyles, /\.stopped-banner\s*\{[^}]*background:\s*#ffd60a;/);
+    assert.match(overlayStyles, /\.stopped-banner\s*\{[^}]*border:\s*3px solid #ff3b30;/);
     assert.match(overlayStyles, /-webkit-text-stroke/);
     assert.doesNotMatch(overlayStyles, /linear-gradient|filter:\s*blur|box-shadow/);
   });

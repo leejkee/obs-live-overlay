@@ -16,9 +16,9 @@ body { padding: 6px; }
 .title-area { padding-bottom: 4px; border-bottom: 2px solid #fff; }
 .overlay-message { margin: 3px 4px 0; overflow-wrap: anywhere; font-size: 22px; font-weight: 800; line-height: 1.12; }
 .overlay-message[hidden] { display: none; }
-.queue-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 38px; padding: 0 4px; }
-h1 { margin: 0; font-size: 30px; line-height: 1; letter-spacing: -.03em; }
-.stopped-banner { display: inline-block; flex: none; padding: 2px 6px; font-size: 20px; font-weight: 900; line-height: 1.1; border: 2px solid #ff5366; border-radius: 3px; background: transparent; animation: reveal .16s ease both; }
+.queue-header { display: grid; grid-template-columns: minmax(118px, 2fr) minmax(0, 3fr); align-items: stretch; gap: 10px; min-height: 48px; padding: 0 2px 0 4px; }
+h1 { align-self: center; margin: 0; font-size: 30px; line-height: 1; letter-spacing: -.03em; white-space: nowrap; }
+.stopped-banner { display: flex; align-items: center; justify-content: center; min-width: 0; padding: 5px 14px; color: #170c00; font-size: 27px; font-weight: 950; line-height: 1; letter-spacing: .14em; text-indent: .14em; -webkit-text-stroke: 0; paint-order: normal; text-shadow: none; border: 3px solid #ff3b30; border-left-width: 10px; border-radius: 5px; outline: 2px solid #050505; background: #ffd60a; animation: stopped-reveal .22s cubic-bezier(.2,.8,.2,1) both; }
 .stopped-banner[hidden] { display: none; }
 
 .queue-list { position: relative; list-style: none; margin: 3px 0 0; padding: 0; }
@@ -31,7 +31,6 @@ h1 { margin: 0; font-size: 30px; line-height: 1; letter-spacing: -.03em; }
 
 h1,
 .overlay-message,
-.stopped-banner,
 .queue-position,
 .queue-name,
 .current-label,
@@ -53,6 +52,7 @@ h1,
 @keyframes enter { from { opacity: 0; transform: translateX(-5px); } }
 @keyframes leave { to { opacity: 0; transform: translateX(5px); } }
 @keyframes reveal { from { opacity: 0; } }
+@keyframes stopped-reveal { from { opacity: 0; transform: scaleX(.82); } }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
