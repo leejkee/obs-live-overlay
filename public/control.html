@@ -109,14 +109,17 @@
                 <span class="block-index">02</span>
                 <div>
                   <h2 id="title-heading">队列标题</h2>
-                  <p>Overlay 顶部左侧的固定标题</p>
+                  <p>Overlay 顶部左侧的标题文案</p>
                 </div>
                 <button class="section-select-button" type="button" data-select-section="title" aria-pressed="false">编辑字体</button>
               </header>
-              <div class="fixed-content-preview">
-                <span>显示内容</span>
-                <strong>等候队列</strong>
-              </div>
+              <form class="content-form" data-overlay-content-form="title">
+                <label class="field-label" for="queue-title-input">显示内容</label>
+                <div class="input-actions">
+                  <input id="queue-title-input" data-overlay-content-input="title" maxlength="40" autocomplete="off" required />
+                  <button class="primary-button" type="submit">保存</button>
+                </div>
+              </form>
             </section>
 
             <section class="content-card" data-content-section="message" aria-labelledby="message-heading">
@@ -142,7 +145,7 @@
               <header class="content-card-header">
                 <span class="block-index">04</span>
                 <div>
-                  <h2 id="stop-heading">“不排了”提示</h2>
+                  <h2 id="stop-heading">停止排队提示</h2>
                   <p>Overlay 标题右侧的醒目状态横幅</p>
                 </div>
                 <div class="header-actions">
@@ -153,6 +156,13 @@
                   </button>
                 </div>
               </header>
+              <form class="content-form" data-overlay-content-form="stopped">
+                <label class="field-label" for="stopped-content-input">显示内容</label>
+                <div class="input-actions">
+                  <input id="stopped-content-input" data-overlay-content-input="stopped" maxlength="40" autocomplete="off" required />
+                  <button class="primary-button" type="submit">保存</button>
+                </div>
+              </form>
             </section>
           </div>
 

@@ -13,6 +13,8 @@ const elements = {
   messageForm: document.querySelector("#message-form"),
   messageInput: document.querySelector("#overlay-message-input"),
   clearMessage: document.querySelector("#clear-message-button"),
+  contentForms: [...document.querySelectorAll("[data-overlay-content-form]")],
+  contentInputs: [...document.querySelectorAll("[data-overlay-content-input]")],
   stopToggle: document.querySelector("#stop-toggle"),
   stopToggleLabel: document.querySelector("#stop-toggle-label"),
   dot: document.querySelector("#connection-dot"),
@@ -54,7 +56,7 @@ const typographySectionLabels = {
   queue: "队列内容",
   title: "队列标题",
   message: "Overlay 消息",
-  stopped: "“不排了”提示",
+  stopped: "停止排队提示",
 };
 let typographyTimer;
 let selectedTypographySection = "queue";
@@ -64,6 +66,7 @@ let state = {
   currentId: null,
   isQueueStopped: false,
   message: "",
+  content: { title: "等候队列", stopped: "不排了" },
   typography: defaultTypography,
   revision: 0,
 };
@@ -94,6 +97,9 @@ function setState(nextState) {
   elements.stopToggle.setAttribute("aria-checked", String(state.isQueueStopped));
   elements.stopToggleLabel.textContent = state.isQueueStopped ? "已开启" : "已关闭";
   if (document.activeElement !== elements.messageInput) elements.messageInput.value = state.message ?? "";
+  for (const input of elements.contentInputs) {
+    if (document.activeElement !== input) input.value = state.content?.[input.dataset.overlayContentInput] ?? "";
+  }
   elements.clearMessage.disabled = !(state.message ?? "");
   elements.list.replaceChildren(...state.items.map(createRow));
   syncTypographyEditor();
@@ -402,6 +408,18 @@ elements.clearMessage.addEventListener("click", () => {
     return nextState;
   });
 });
+
+for (const form of elements.contentForms) {
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const section = form.dataset.overlayContentForm;
+    const input = form.querySelector(`[data-overlay-content-input="${section}"]`);
+    act(() => request(`/api/overlays/queue/content/${encodeURIComponent(section)}`, {
+      method: "PUT",
+      body: JSON.stringify({ content: input.value }),
+    }));
+  });
+}
 
 elements.stopToggle.addEventListener("click", () => {
   act(() => request("/api/overlays/queue/stopped", {

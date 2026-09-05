@@ -27,7 +27,7 @@ describe("ProfileManager", () => {
       profiles: [{ id: "default", name: "默认", isDefault: true }],
     });
     const persisted = JSON.parse(await readFile(file, "utf8"));
-    assert.equal(persisted.version, 4);
+    assert.equal(persisted.version, 5);
     assert.equal(persisted.activeProfileId, "default");
   });
 
@@ -39,6 +39,8 @@ describe("ProfileManager", () => {
       queue.enqueue("User-B");
       queue.setCurrent("User-B");
       queue.setMessage("欢迎");
+      queue.setContent("title", "周末等候队列");
+      queue.setContent("stopped", "本场已满");
       queue.setQueueStopped(true);
       queue.setTypography("message", { fontFamily: "serif", fontSize: 31, italic: true, textColor: "#22ccaa", outlineColor: "#330055", outlineWidth: 2 });
     });
@@ -51,6 +53,7 @@ describe("ProfileManager", () => {
     assert.deepEqual(restored.activeQueueState().items, [{ id: "User-A" }, { id: "User-B" }]);
     assert.equal(restored.activeQueueState().currentId, "User-B");
     assert.equal(restored.activeQueueState().message, "欢迎");
+    assert.deepEqual(restored.activeQueueState().content, { title: "周末等候队列", stopped: "本场已满" });
     assert.equal(restored.activeQueueState().isQueueStopped, true);
     assert.deepEqual(restored.activeQueueState().typography.message, {
       fontFamily: "serif",
@@ -132,6 +135,28 @@ describe("ProfileManager", () => {
     await writeFile(file, JSON.stringify(legacyData), "utf8");
     const restored = await ProfileManager.load(file);
     assert.equal(restored.activeQueueState().currentId, "User-A");
+  });
+
+  it("加载第四版 Profile 时补充默认固定显示内容", async () => {
+    const { file } = await createManager();
+    const legacyData = {
+      version: 4,
+      activeProfileId: "default",
+      profiles: [{
+        id: "default",
+        name: "默认",
+        queue: {
+          items: [],
+          currentId: null,
+          isQueueStopped: false,
+          message: "",
+          revision: 0,
+        },
+      }],
+    };
+    await writeFile(file, JSON.stringify(legacyData), "utf8");
+    const restored = await ProfileManager.load(file);
+    assert.deepEqual(restored.activeQueueState().content, { title: "等候队列", stopped: "不排了" });
   });
 
   it("支持重命名和删除，并保护 default Profile", async () => {
