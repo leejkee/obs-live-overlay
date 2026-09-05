@@ -1,5 +1,6 @@
 const list = document.querySelector("#queue-list");
 const empty = document.querySelector("#empty-message");
+const queueTitle = document.querySelector("#queue-title");
 const stoppedBanner = document.querySelector("#stopped-banner");
 const overlayMessage = document.querySelector("#overlay-message");
 const connection = document.querySelector("#connection-status");
@@ -27,6 +28,8 @@ let hasRendered = false;
 
 function update(nextState) {
   applyTypography(nextState.typography);
+  queueTitle.textContent = nextState.content?.title ?? "等候队列";
+  stoppedBanner.textContent = nextState.content?.stopped ?? "不排了";
   const message = nextState.message ?? "";
   overlayMessage.textContent = message;
   overlayMessage.hidden = !message;

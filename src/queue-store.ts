@@ -5,10 +5,12 @@ export interface QueueItem {
 export const fontFamilies = ["system", "modern", "serif", "rounded", "mono"] as const;
 export const textAlignments = ["left", "center", "right"] as const;
 export const typographySections = ["title", "message", "stopped", "queue"] as const;
+export const contentSections = ["title", "stopped"] as const;
 
 export type FontFamily = typeof fontFamilies[number];
 export type TextAlignment = typeof textAlignments[number];
 export type TypographySection = typeof typographySections[number];
+export type ContentSection = typeof contentSections[number];
 
 export interface TextStyle {
   fontFamily: FontFamily;
@@ -22,12 +24,14 @@ export interface TextStyle {
 }
 
 export type TypographySettings = Record<TypographySection, TextStyle>;
+export type ContentSettings = Record<ContentSection, string>;
 
 export interface QueueState {
   items: QueueItem[];
   currentId: string | null;
   isQueueStopped: boolean;
   message: string;
+  content: ContentSettings;
   typography: TypographySettings;
   revision: number;
 }
@@ -37,6 +41,7 @@ export interface PersistedQueueState {
   currentId?: string | null;
   isQueueStopped: boolean;
   message: string;
+  content?: Partial<ContentSettings>;
   typography?: TypographySettings;
   revision: number;
 }
@@ -46,6 +51,7 @@ export class QueueStore {
   #currentId: string | null;
   #isQueueStopped: boolean;
   #message: string;
+  #content: ContentSettings;
   #typography: TypographySettings;
   #revision: number;
 
@@ -54,6 +60,7 @@ export class QueueStore {
     this.#currentId = normalizeInitialCurrentId(initial?.currentId, this.#items);
     this.#isQueueStopped = initial?.isQueueStopped ?? false;
     this.#message = initial?.message ?? "";
+    this.#content = normalizeContent(initial?.content);
     this.#typography = normalizeTypography(initial?.typography);
     this.#revision = initial?.revision ?? 0;
   }
@@ -64,6 +71,7 @@ export class QueueStore {
       currentId: this.#currentId,
       isQueueStopped: this.#isQueueStopped,
       message: this.#message,
+      content: { ...this.#content },
       typography: cloneTypography(this.#typography),
       revision: this.#revision,
     };
@@ -75,6 +83,7 @@ export class QueueStore {
       currentId: this.#currentId,
       isQueueStopped: this.#isQueueStopped,
       message: this.#message,
+      content: { ...this.#content },
       typography: cloneTypography(this.#typography),
       revision: this.#revision,
     };
@@ -133,6 +142,16 @@ export class QueueStore {
     return this.#message;
   }
 
+  setContent(sectionValue: unknown, value: unknown): string {
+    const section = normalizeContentSection(sectionValue);
+    const content = normalizeContentValue(value);
+    if (this.#content[section] !== content) {
+      this.#content[section] = content;
+      this.#revision += 1;
+    }
+    return this.#content[section];
+  }
+
   setTypography(sectionValue: unknown, value: unknown): TextStyle {
     const section = normalizeTypographySection(sectionValue);
     const current = this.#typography[section];
@@ -143,6 +162,20 @@ export class QueueStore {
     }
     return { ...this.#typography[section] };
   }
+}
+
+export function createDefaultContent(): ContentSettings {
+  return { title: "等候队列", stopped: "不排了" };
+}
+
+export function normalizeContent(value: unknown): ContentSettings {
+  const defaults = createDefaultContent();
+  if (value === undefined) return defaults;
+  if (!isRecord(value)) throw new ValidationError("显示内容格式无效");
+  return {
+    title: value.title === undefined ? defaults.title : normalizeContentValue(value.title),
+    stopped: value.stopped === undefined ? defaults.stopped : normalizeContentValue(value.stopped),
+  };
 }
 
 export function createDefaultTypography(): TypographySettings {
@@ -171,6 +204,21 @@ function normalizeTypographySection(value: unknown): TypographySection {
     throw new ValidationError("字体设置区域无效");
   }
   return value as TypographySection;
+}
+
+function normalizeContentSection(value: unknown): ContentSection {
+  if (typeof value !== "string" || !contentSections.includes(value as ContentSection)) {
+    throw new ValidationError("显示内容区域无效");
+  }
+  return value as ContentSection;
+}
+
+function normalizeContentValue(value: unknown): string {
+  if (typeof value !== "string") throw new ValidationError("显示内容必须是字符串");
+  const content = value.trim();
+  if (!content) throw new ValidationError("显示内容不能为空");
+  if (content.length > 40) throw new ValidationError("显示内容不能超过 40 个字符");
+  return content;
 }
 
 function normalizeTextStyle(value: unknown, fallback: TextStyle): TextStyle {

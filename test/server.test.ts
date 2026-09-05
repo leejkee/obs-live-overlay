@@ -42,23 +42,30 @@ describe("Overlay Service", () => {
     assert.match(controlHtml, /data-content-section="title"/);
     assert.match(controlHtml, /data-content-section="message"/);
     assert.match(controlHtml, /data-content-section="stopped"/);
+    assert.match(controlHtml, /data-overlay-content-form="title"/);
+    assert.match(controlHtml, /data-overlay-content-form="stopped"/);
     assert.match(controlHtml, /data-theme-option="light"/);
     assert.match(controlHtml, /data-theme-option="dark"/);
     assert.equal(overlay.status, 200);
     const overlayHtml = await overlay.text();
     assert.match(overlayHtml, /queue-list/);
+    assert.match(overlayHtml, /id="queue-title"/);
     assert.match(overlayHtml, /不排了/);
     assert.match(overlayHtml, /overlay-message/);
     assert.match(overlayHtml, /<div class="title-area">[\s\S]*<\/header>\s*<div id="overlay-message"[\s\S]*<\/div>\s*<div id="empty-message"/);
     assert.doesNotMatch(overlayHtml, /停止排队/);
     assert.doesNotMatch(overlayHtml, /LIVE QUEUE|queue-count/);
-    assert.match(await (await fetch(`${baseUrl}/overlay.js`)).text(), /当前上号/);
+    const overlayScript = await (await fetch(`${baseUrl}/overlay.js`)).text();
+    assert.match(overlayScript, /当前上号/);
+    assert.match(overlayScript, /nextState\.content\?\.title/);
+    assert.match(overlayScript, /nextState\.content\?\.stopped/);
     const controlScript = await (await fetch(`${baseUrl}/control.js`)).text();
     assert.match(controlScript, /data-text-color/);
     assert.match(controlScript, /data-outline-color/);
     assert.match(controlScript, /data-outline-width/);
     assert.match(controlScript, /obs-live-overlay:control-theme/);
     assert.match(controlScript, /\/api\/overlays\/queue\/current/);
+    assert.match(controlScript, /\/api\/overlays\/queue\/content/);
     const controlStyles = await controlCss.text();
     assert.match(controlStyles, /:root\[data-theme="light"\]/);
     assert.doesNotMatch(controlStyles, /gradient|box-shadow|backdrop-filter|animation|transition/i);
@@ -153,6 +160,39 @@ describe("Overlay Service", () => {
     const message = JSON.parse(await broadcastPromise);
     assert.equal(message.state.message, "欢迎加入");
     socket.close();
+  });
+
+  it("更新固定显示内容并通过 WebSocket 广播", async () => {
+    const wsUrl = baseUrl.replace("http:", "ws:") + "/ws";
+    const socket = new WebSocket(wsUrl);
+    await onceMessage(socket);
+    const broadcastPromise = onceMessage(socket);
+
+    const response = await fetch(`${baseUrl}/api/overlays/queue/content/title`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content: "今晚等待名单" }),
+    });
+    assert.equal(response.status, 200);
+    const state = await response.json();
+    assert.equal(state.content.title, "今晚等待名单");
+    const message = JSON.parse(await broadcastPromise);
+    assert.equal(message.state.content.title, "今晚等待名单");
+    socket.close();
+
+    const stoppedResponse = await fetch(`${baseUrl}/api/overlays/queue/content/stopped`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content: "今天收工" }),
+    });
+    assert.equal((await stoppedResponse.json()).content.stopped, "今天收工");
+
+    const invalidResponse = await fetch(`${baseUrl}/api/overlays/queue/content/unknown`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content: "内容" }),
+    });
+    assert.equal(invalidResponse.status, 400);
   });
 
   it("指定当前上号用户时不改变队列顺序，并支持当前用户出队", async () => {

@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import {
+  normalizeContent,
   normalizeTypography,
   QueueStore,
   ValidationError,
@@ -9,8 +10,8 @@ import {
   type QueueState,
 } from "./queue-store.js";
 
-const formatVersion = 4;
-const supportedFormatVersions = new Set([1, 2, 3, formatVersion]);
+const formatVersion = 5;
+const supportedFormatVersions = new Set([1, 2, 3, 4, formatVersion]);
 const defaultProfileId = "default";
 
 interface StoredProfile {
@@ -254,6 +255,7 @@ function parseProfile(value: unknown, version: number): StoredProfile {
       currentId,
       isQueueStopped: queue.isQueueStopped,
       message: queue.message,
+      content: normalizeContent(queue.content),
       typography: normalizeTypography(queue.typography),
       revision: queue.revision,
     },

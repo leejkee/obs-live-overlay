@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { ConflictError, createDefaultTypography, NotFoundError, QueueStore, ValidationError } from "../src/queue-store.js";
+import { ConflictError, createDefaultContent, createDefaultTypography, NotFoundError, QueueStore, ValidationError } from "../src/queue-store.js";
 
 describe("QueueStore", () => {
   it("自动把队首标记为 current，出队后切换到下一位", () => {
@@ -12,6 +12,7 @@ describe("QueueStore", () => {
       currentId: "User-A",
       isQueueStopped: false,
       message: "",
+      content: createDefaultContent(),
       typography: createDefaultTypography(),
       revision: 2,
     });
@@ -79,6 +80,20 @@ describe("QueueStore", () => {
     assert.equal(store.snapshot().message, "");
     assert.throws(() => store.setMessage(123), ValidationError);
     assert.throws(() => store.setMessage("x".repeat(121)), ValidationError);
+  });
+
+  it("按区域保存并验证固定显示内容", () => {
+    const store = new QueueStore();
+    assert.deepEqual(store.snapshot().content, { title: "等候队列", stopped: "不排了" });
+    assert.equal(store.setContent("title", "  今晚车队  "), "今晚车队");
+    assert.equal(store.setContent("stopped", "今天收工"), "今天收工");
+    assert.deepEqual(store.snapshot().content, { title: "今晚车队", stopped: "今天收工" });
+    assert.equal(store.snapshot().revision, 2);
+    store.setContent("title", "今晚车队");
+    assert.equal(store.snapshot().revision, 2);
+    assert.throws(() => store.setContent("unknown", "内容"), ValidationError);
+    assert.throws(() => store.setContent("title", "  "), ValidationError);
+    assert.throws(() => store.setContent("title", "x".repeat(41)), ValidationError);
   });
 
   it("按区域保存字体、格式、字号、对齐和渲染设置", () => {

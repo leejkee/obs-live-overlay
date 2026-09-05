@@ -131,6 +131,15 @@ export async function createOverlayServer(options: { dataFile?: string; shutdown
       broadcast();
       return json(response, 200, manager.activeQueueState());
     }
+    const contentMatch = url.pathname.match(new RegExp(`^/api/overlays/${overlayId}/content/([^/]+)$`));
+    if (method === "PUT" && contentMatch) {
+      const body = await readJson(request);
+      await manager.updateActiveQueue((queue) => {
+        queue.setContent(decodeURIComponent(contentMatch[1]), body.content);
+      });
+      broadcast();
+      return json(response, 200, manager.activeQueueState());
+    }
     const typographyMatch = url.pathname.match(new RegExp(`^/api/overlays/${overlayId}/typography/([^/]+)$`));
     if (method === "PUT" && typographyMatch) {
       const body = await readJson(request);
