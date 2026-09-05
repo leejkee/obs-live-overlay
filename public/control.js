@@ -47,10 +47,10 @@ for (const option of elements.themeOptions) {
 setTheme(document.documentElement.dataset.theme);
 
 const defaultTypography = {
-  title: { fontFamily: "system", fontSize: 30, bold: true, italic: false, textAlign: "left", textColor: "#ffffff", outlineColor: "#050505", outlineWidth: 1 },
-  message: { fontFamily: "system", fontSize: 22, bold: true, italic: false, textAlign: "left", textColor: "#ffffff", outlineColor: "#050505", outlineWidth: 1 },
-  stopped: { fontFamily: "system", fontSize: 27, bold: true, italic: false, textAlign: "center", textColor: "#ffffff", outlineColor: "#050505", outlineWidth: 1 },
-  queue: { fontFamily: "system", fontSize: 24, bold: true, italic: false, textAlign: "left", textColor: "#ffffff", outlineColor: "#050505", outlineWidth: 1 },
+  title: { fontFamily: "system", fontSize: 30, bold: true, textAlign: "left", textColor: "#ffffff", outlineEnabled: true, outlineColor: "#050505", outlineWidth: 1 },
+  message: { fontFamily: "system", fontSize: 22, bold: true, textAlign: "left", textColor: "#ffffff", outlineEnabled: true, outlineColor: "#050505", outlineWidth: 1 },
+  stopped: { fontFamily: "system", fontSize: 27, bold: true, textAlign: "center", textColor: "#ffffff", outlineEnabled: true, outlineColor: "#050505", outlineWidth: 1 },
+  queue: { fontFamily: "system", fontSize: 24, bold: true, textAlign: "left", textColor: "#ffffff", outlineEnabled: true, outlineColor: "#050505", outlineWidth: 1 },
 };
 const typographySectionLabels = {
   queue: "队列内容",
@@ -133,19 +133,20 @@ function initializeTypographyEditor() {
             <output class="size-value" data-font-size-box>24</output>
           </span>
         </label>
-        <div class="control-group">
-          <span>格式</span>
-          <div class="segmented-control">
-            <button class="style-button" type="button" data-format="bold" aria-pressed="false">加粗</button>
-            <button class="style-button" type="button" data-format="italic" aria-pressed="false">斜体</button>
+        <div class="inline-control-groups">
+          <div class="control-group">
+            <span>格式</span>
+            <div class="segmented-control">
+              <button class="style-button" type="button" data-format="bold" aria-pressed="false">加粗</button>
+            </div>
           </div>
-        </div>
-        <div class="control-group">
-          <span>对齐</span>
-          <div class="segmented-control">
-            <button class="style-button" type="button" data-align="left" aria-pressed="false">左</button>
-            <button class="style-button" type="button" data-align="center" aria-pressed="false">中</button>
-            <button class="style-button" type="button" data-align="right" aria-pressed="false">右</button>
+          <div class="control-group">
+            <span>对齐</span>
+            <div class="segmented-control">
+              <button class="style-button" type="button" data-align="left" aria-pressed="false">左</button>
+              <button class="style-button" type="button" data-align="center" aria-pressed="false">中</button>
+              <button class="style-button" type="button" data-align="right" aria-pressed="false">右</button>
+            </div>
           </div>
         </div>
         <div class="render-controls">
@@ -160,20 +161,26 @@ function initializeTypographyEditor() {
               <code data-text-color-value>#ffffff</code>
             </span>
           </label>
-          <label class="control-field color-field">
-            <span>描边颜色</span>
-            <span class="color-control">
-              <input type="color" value="#050505" data-outline-color aria-label="描边颜色" />
-              <code data-outline-color-value>#050505</code>
-            </span>
+          <label class="checkbox-control">
+            <input type="checkbox" data-outline-enabled />
+            <span>启用文字描边</span>
           </label>
-          <label class="control-field">
-            <span class="size-label">描边宽度 <output data-outline-width-output>1 px</output></span>
-            <span class="size-control">
-              <input type="range" min="0" max="8" step="1" value="1" data-outline-width aria-label="描边宽度" />
-              <output class="size-value" data-outline-width-box>1</output>
-            </span>
-          </label>
+          <div class="outline-controls" data-outline-controls>
+            <label class="control-field color-field">
+              <span>描边颜色</span>
+              <span class="color-control">
+                <input type="color" value="#050505" data-outline-color aria-label="描边颜色" />
+                <code data-outline-color-value>#050505</code>
+              </span>
+            </label>
+            <label class="control-field">
+              <span class="size-label">描边宽度 <output data-outline-width-output>1 px</output></span>
+              <span class="size-control">
+                <input type="range" min="1" max="8" step="1" value="1" data-outline-width aria-label="描边宽度" />
+                <output class="size-value" data-outline-width-box>1</output>
+              </span>
+            </label>
+          </div>
         </div>
       </div>
     `;
@@ -187,7 +194,8 @@ function initializeTypographyEditor() {
     typographyTimer = setTimeout(saveTypography, 220);
   });
   editor.addEventListener("change", (event) => {
-    if (!event.target.matches("[data-font-family], [data-font-size], [data-text-color], [data-outline-color], [data-outline-width]")) return;
+    if (!event.target.matches("[data-font-family], [data-font-size], [data-text-color], [data-outline-enabled], [data-outline-color], [data-outline-width]")) return;
+    if (event.target.matches("[data-outline-enabled]")) updateOutlineControlsState(editor);
     clearTimeout(typographyTimer);
     void saveTypography();
   });
@@ -244,13 +252,14 @@ function syncTypographyEditor() {
   editor.querySelector("[data-font-size]").value = String(style.fontSize);
   updateSizeOutputs(editor, style.fontSize);
   editor.querySelector('[data-format="bold"]').setAttribute("aria-pressed", String(style.bold));
-  editor.querySelector('[data-format="italic"]').setAttribute("aria-pressed", String(style.italic));
   for (const button of editor.querySelectorAll("[data-align]")) {
     button.setAttribute("aria-pressed", String(button.dataset.align === style.textAlign));
   }
   editor.querySelector("[data-text-color]").value = style.textColor;
+  editor.querySelector("[data-outline-enabled]").checked = style.outlineEnabled;
   editor.querySelector("[data-outline-color]").value = style.outlineColor;
   editor.querySelector("[data-outline-width]").value = String(style.outlineWidth);
+  updateOutlineControlsState(editor);
   updateRenderingOutputs(editor);
 }
 
@@ -269,14 +278,21 @@ function updateRenderingOutputs(editor) {
   editor.querySelector("[data-outline-width-box]").textContent = outlineWidth;
 }
 
+function updateOutlineControlsState(editor) {
+  const enabled = editor.querySelector("[data-outline-enabled]").checked;
+  const controls = editor.querySelector("[data-outline-controls]");
+  controls.classList.toggle("disabled", !enabled);
+  for (const input of controls.querySelectorAll("input")) input.disabled = !enabled;
+}
+
 function readTypography(editor) {
   return {
     fontFamily: editor.querySelector("[data-font-family]").value,
     fontSize: Number(editor.querySelector("[data-font-size]").value),
     bold: editor.querySelector('[data-format="bold"]').getAttribute("aria-pressed") === "true",
-    italic: editor.querySelector('[data-format="italic"]').getAttribute("aria-pressed") === "true",
     textAlign: editor.querySelector('[data-align][aria-pressed="true"]').dataset.align,
     textColor: editor.querySelector("[data-text-color]").value,
+    outlineEnabled: editor.querySelector("[data-outline-enabled]").checked,
     outlineColor: editor.querySelector("[data-outline-color]").value,
     outlineWidth: Number(editor.querySelector("[data-outline-width]").value),
   };

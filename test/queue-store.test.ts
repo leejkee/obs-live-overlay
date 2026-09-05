@@ -102,18 +102,18 @@ describe("QueueStore", () => {
       fontFamily: "serif",
       fontSize: 42,
       bold: false,
-      italic: true,
       textAlign: "center",
       textColor: "#AABBCC",
+      outlineEnabled: false,
       outlineColor: "#112233",
       outlineWidth: 3,
     }), {
       fontFamily: "serif",
       fontSize: 42,
       bold: false,
-      italic: true,
       textAlign: "center",
       textColor: "#aabbcc",
+      outlineEnabled: false,
       outlineColor: "#112233",
       outlineWidth: 3,
     });
@@ -124,7 +124,9 @@ describe("QueueStore", () => {
     assert.throws(() => store.setTypography("queue", { fontSize: 100 }), ValidationError);
     assert.throws(() => store.setTypography("queue", { fontFamily: "remote-font" }), ValidationError);
     assert.throws(() => store.setTypography("queue", { textColor: "white" }), ValidationError);
+    assert.throws(() => store.setTypography("queue", { outlineEnabled: "true" }), ValidationError);
     assert.throws(() => store.setTypography("queue", { outlineColor: "#fff" }), ValidationError);
+    assert.throws(() => store.setTypography("queue", { outlineWidth: 0 }), ValidationError);
     assert.throws(() => store.setTypography("queue", { outlineWidth: 9 }), ValidationError);
   });
 });

@@ -27,7 +27,7 @@ describe("ProfileManager", () => {
       profiles: [{ id: "default", name: "默认", isDefault: true }],
     });
     const persisted = JSON.parse(await readFile(file, "utf8"));
-    assert.equal(persisted.version, 5);
+    assert.equal(persisted.version, 6);
     assert.equal(persisted.activeProfileId, "default");
   });
 
@@ -42,7 +42,7 @@ describe("ProfileManager", () => {
       queue.setContent("title", "周末等候队列");
       queue.setContent("stopped", "本场已满");
       queue.setQueueStopped(true);
-      queue.setTypography("message", { fontFamily: "serif", fontSize: 31, italic: true, textColor: "#22ccaa", outlineColor: "#330055", outlineWidth: 2 });
+      queue.setTypography("message", { fontFamily: "serif", fontSize: 31, textColor: "#22ccaa", outlineEnabled: false, outlineColor: "#330055", outlineWidth: 2 });
     });
     await manager.activateProfile("default");
     assert.deepEqual(manager.activeQueueState().items, []);
@@ -59,9 +59,9 @@ describe("ProfileManager", () => {
       fontFamily: "serif",
       fontSize: 31,
       bold: true,
-      italic: true,
       textAlign: "left",
       textColor: "#22ccaa",
+      outlineEnabled: false,
       outlineColor: "#330055",
       outlineWidth: 2,
     });
@@ -83,6 +83,7 @@ describe("ProfileManager", () => {
     assert.equal(restored.activeQueueState().typography.title.fontSize, 30);
     assert.equal(restored.activeQueueState().typography.queue.fontFamily, "system");
     assert.equal(restored.activeQueueState().typography.queue.textColor, "#ffffff");
+    assert.equal(restored.activeQueueState().typography.stopped.outlineEnabled, true);
     assert.equal(restored.activeQueueState().typography.stopped.outlineWidth, 1);
   });
 
@@ -112,8 +113,41 @@ describe("ProfileManager", () => {
     const restored = await ProfileManager.load(file);
     assert.equal(restored.activeQueueState().typography.title.fontFamily, "serif");
     assert.equal(restored.activeQueueState().typography.title.textColor, "#ffffff");
+    assert.equal(restored.activeQueueState().typography.title.outlineEnabled, true);
     assert.equal(restored.activeQueueState().typography.title.outlineColor, "#050505");
     assert.equal(restored.activeQueueState().typography.title.outlineWidth, 1);
+    assert.equal("italic" in restored.activeQueueState().typography.title, false);
+  });
+
+  it("加载第五版 Profile 时把零宽描边迁移为关闭状态", async () => {
+    const { file } = await createManager();
+    const legacyData = {
+      version: 5,
+      activeProfileId: "default",
+      profiles: [{
+        id: "default",
+        name: "默认",
+        queue: {
+          items: [],
+          currentId: null,
+          isQueueStopped: false,
+          message: "",
+          content: { title: "等候队列", stopped: "不排了" },
+          revision: 0,
+          typography: {
+            title: { fontFamily: "serif", fontSize: 40, bold: true, italic: true, textAlign: "center", textColor: "#ffffff", outlineColor: "#050505", outlineWidth: 0 },
+            message: { fontFamily: "system", fontSize: 22, bold: true, italic: false, textAlign: "left", textColor: "#ffffff", outlineColor: "#050505", outlineWidth: 1 },
+            stopped: { fontFamily: "system", fontSize: 27, bold: true, italic: false, textAlign: "center", textColor: "#ffffff", outlineColor: "#050505", outlineWidth: 1 },
+            queue: { fontFamily: "system", fontSize: 24, bold: true, italic: false, textAlign: "left", textColor: "#ffffff", outlineColor: "#050505", outlineWidth: 1 },
+          },
+        },
+      }],
+    };
+    await writeFile(file, JSON.stringify(legacyData), "utf8");
+    const restored = await ProfileManager.load(file);
+    assert.equal(restored.activeQueueState().typography.title.outlineEnabled, false);
+    assert.equal(restored.activeQueueState().typography.title.outlineWidth, 1);
+    assert.equal("italic" in restored.activeQueueState().typography.title, false);
   });
 
   it("加载第三版 Profile 时默认以队首作为当前上号用户", async () => {
