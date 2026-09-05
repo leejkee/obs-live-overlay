@@ -12,8 +12,6 @@
 
 ![OBS 等候队列 Overlay](docs/images/queue-overlay.png)
 
-Overlay 使用透明背景，可直接叠加到直播画面。
-
 ## 安装
 
 需要 Node.js 20 或更高版本。
@@ -24,42 +22,18 @@ npm install --global @leejkee/obs-live-overlay
 
 ## 使用
 
-安装后在终端启动：
+在终端启动：
 
 ```bash
 obs-live-overlay
 ```
 
-然后打开：
+启动后打开：
 
 - 控制台：<http://127.0.0.1:3000/control>
 - OBS Overlay：<http://127.0.0.1:3000/overlay/queue>
 
-在控制台中添加观众、指定当前上号用户、完成当前用户出队、修改队列标题和停止排队文案、显示提示消息，并调整各区域的字体、字号、颜色以及是否启用描边。指定当前用户不会改变原有排队顺序，适合临时跳过不在场的观众。控制台支持浅色、深色主题，选择会保存在当前浏览器中。将 OBS Overlay 地址添加为 OBS 的 Browser Source；页面背景透明，可直接叠加到直播画面。
-
-服务以前台方式运行，按 `Ctrl+C` 停止。
-
-### Windows 静默启动
-
-Windows 11 可以将服务注册为当前用户登录后自动运行的计划任务。启用时会请求一次管理员授权并立即启动服务，后续登录无需再次授权、无需打开终端，也不会出现黑色命令窗口：
-
-```bash
-obs-live-overlay startup-enable
-```
-
-查看计划任务是否启用，以及默认地址上的 Overlay 服务是否可访问：
-
-```bash
-obs-live-overlay startup-status
-```
-
-停止后台服务并取消自动启动：
-
-```bash
-obs-live-overlay startup-disable
-```
-
-静默启动固定使用默认地址 `127.0.0.1:3000` 和默认数据文件。关闭静默启动或卸载程序不会删除队列数据。全局卸载前建议先运行 `startup-disable`；更换 Node.js 安装位置后请重新运行 `startup-enable`。
+将 Overlay 地址添加为 OBS 的 Browser Source。页面背景透明，可以直接叠加到直播画面。控制台支持管理队列、指定当前用户、修改显示文案和字体样式；按 `Ctrl+C` 停止服务。
 
 ### 常用选项
 
@@ -71,7 +45,29 @@ obs-live-overlay --help
 obs-live-overlay --version
 ```
 
-Windows 默认数据文件位于 `%LOCALAPPDATA%\obs-live-overlay\profiles.json`。使用 `--data-file` 可以指定其他保存位置。
+Windows 默认数据文件位于 `%LOCALAPPDATA%\obs-live-overlay\profiles.json`。
+
+### Windows 静默启动
+
+Windows 11 可以将服务注册为登录后自动运行的计划任务。启用时会请求一次管理员授权：
+
+```bash
+obs-live-overlay startup-enable
+```
+
+查看状态：
+
+```bash
+obs-live-overlay startup-status
+```
+
+停止服务并取消自动启动：
+
+```bash
+obs-live-overlay startup-disable
+```
+
+静默启动固定使用 `127.0.0.1:3000` 和默认数据文件。全局卸载或更换 Node.js 安装位置前，请先运行 `startup-disable`；更换后可重新启用。
 
 ## 卸载
 
@@ -80,19 +76,8 @@ obs-live-overlay startup-disable
 npm uninstall --global @leejkee/obs-live-overlay
 ```
 
-卸载不会删除已经保存的队列数据。如需完全清理，可在卸载后手动删除数据文件。
+卸载不会删除队列数据。如需完全清理，请手动删除默认数据文件。
 
-## 源码开发
+## 开发文档
 
-```bash
-git clone https://github.com/leejkee/obs-live-overlay.git
-cd obs-live-overlay
-npm install
-npm run dev
-```
-
-开发服务默认使用与正式命令相同的地址。修改代码后可运行：
-
-```bash
-npm run verify
-```
+项目架构与实现说明见 [设计文档](docs/design.md)。
