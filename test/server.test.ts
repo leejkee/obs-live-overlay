@@ -61,13 +61,17 @@ describe("Overlay Service", () => {
     assert.match(overlayScript, /nextState\.content\?\.stopped/);
     const controlScript = await (await fetch(`${baseUrl}/control.js`)).text();
     assert.match(controlScript, /data-text-color/);
+    assert.match(controlScript, /class="inline-control-groups"/);
+    assert.match(controlScript, /type="checkbox" data-outline-enabled/);
     assert.match(controlScript, /data-outline-color/);
     assert.match(controlScript, /data-outline-width/);
+    assert.doesNotMatch(controlScript, /data-format="italic"|style\.italic/);
     assert.match(controlScript, /obs-live-overlay:control-theme/);
     assert.match(controlScript, /\/api\/overlays\/queue\/current/);
     assert.match(controlScript, /\/api\/overlays\/queue\/content/);
     const controlStyles = await controlCss.text();
     assert.match(controlStyles, /:root\[data-theme="light"\]/);
+    assert.match(controlStyles, /\.inline-control-groups\s*\{[^}]*grid-template-columns:/);
     assert.doesNotMatch(controlStyles, /gradient|box-shadow|backdrop-filter|animation|transition/i);
     for (const match of controlStyles.matchAll(/#([0-9a-f]{3}|[0-9a-f]{6})\b/gi)) {
       const channels = match[1].length === 3
@@ -89,6 +93,9 @@ describe("Overlay Service", () => {
     assert.match(overlayStyles, /\.stopped-banner\s*\{[^}]*border:\s*0;/);
     assert.doesNotMatch(overlayStyles, /#ffd60a|#ff3b30/);
     assert.match(overlayStyles, /-webkit-text-stroke/);
+    assert.doesNotMatch(overlayStyles, /font-style/);
+    assert.match(overlayScript, /style\.outlineEnabled \? style\.outlineWidth : 0/);
+    assert.doesNotMatch(overlayScript, /style\.italic|font-style/);
     assert.doesNotMatch(overlayStyles, /linear-gradient|filter:\s*blur|box-shadow/);
     assert.match(overlayStyles, /@keyframes queue-insert/);
     assert.match(overlayStyles, /@keyframes queue-eject/);
@@ -241,12 +248,13 @@ describe("Overlay Service", () => {
     const response = await fetch(`${baseUrl}/api/overlays/queue/typography/title`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ fontFamily: "serif", fontSize: 38, italic: true, textColor: "#ffee22", outlineColor: "#112233", outlineWidth: 3 }),
+      body: JSON.stringify({ fontFamily: "serif", fontSize: 38, textColor: "#ffee22", outlineEnabled: false, outlineColor: "#112233", outlineWidth: 3 }),
     });
     assert.equal(response.status, 200);
     const state = await response.json();
     assert.equal(state.typography.title.fontSize, 38);
     assert.equal(state.typography.title.textColor, "#ffee22");
+    assert.equal(state.typography.title.outlineEnabled, false);
     assert.equal(state.typography.title.outlineColor, "#112233");
     assert.equal(state.typography.title.outlineWidth, 3);
     const message = JSON.parse(await broadcastPromise);

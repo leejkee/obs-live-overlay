@@ -10,8 +10,8 @@ import {
   type QueueState,
 } from "./queue-store.js";
 
-const formatVersion = 5;
-const supportedFormatVersions = new Set([1, 2, 3, 4, formatVersion]);
+const formatVersion = 6;
+const supportedFormatVersions = new Set([1, 2, 3, 4, 5, formatVersion]);
 const defaultProfileId = "default";
 
 interface StoredProfile {
@@ -256,10 +256,23 @@ function parseProfile(value: unknown, version: number): StoredProfile {
       isQueueStopped: queue.isQueueStopped,
       message: queue.message,
       content: normalizeContent(queue.content),
-      typography: normalizeTypography(queue.typography),
+      typography: normalizeTypography(migrateTypography(queue.typography, version)),
       revision: queue.revision,
     },
   };
+}
+
+function migrateTypography(value: unknown, version: number): unknown {
+  if (version >= formatVersion || !isRecord(value)) return value;
+  return Object.fromEntries(Object.entries(value).map(([section, style]) => {
+    if (!isRecord(style)) return [section, style];
+    const outlineWidth = style.outlineWidth;
+    return [section, {
+      ...style,
+      outlineEnabled: outlineWidth === undefined ? true : outlineWidth !== 0,
+      outlineWidth: outlineWidth === 0 ? 1 : outlineWidth,
+    }];
+  }));
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

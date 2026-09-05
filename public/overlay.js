@@ -15,10 +15,10 @@ const fontStacks = {
 };
 const boldWeights = { title: 700, message: 800, stopped: 900, queue: 750 };
 const defaultTypography = {
-  title: { fontFamily: "system", fontSize: 30, bold: true, italic: false, textAlign: "left", textColor: "#ffffff", outlineColor: "#050505", outlineWidth: 1 },
-  message: { fontFamily: "system", fontSize: 22, bold: true, italic: false, textAlign: "left", textColor: "#ffffff", outlineColor: "#050505", outlineWidth: 1 },
-  stopped: { fontFamily: "system", fontSize: 27, bold: true, italic: false, textAlign: "center", textColor: "#ffffff", outlineColor: "#050505", outlineWidth: 1 },
-  queue: { fontFamily: "system", fontSize: 24, bold: true, italic: false, textAlign: "left", textColor: "#ffffff", outlineColor: "#050505", outlineWidth: 1 },
+  title: { fontFamily: "system", fontSize: 30, bold: true, textAlign: "left", textColor: "#ffffff", outlineEnabled: true, outlineColor: "#050505", outlineWidth: 1 },
+  message: { fontFamily: "system", fontSize: 22, bold: true, textAlign: "left", textColor: "#ffffff", outlineEnabled: true, outlineColor: "#050505", outlineWidth: 1 },
+  stopped: { fontFamily: "system", fontSize: 27, bold: true, textAlign: "center", textColor: "#ffffff", outlineEnabled: true, outlineColor: "#050505", outlineWidth: 1 },
+  queue: { fontFamily: "system", fontSize: 24, bold: true, textAlign: "left", textColor: "#ffffff", outlineEnabled: true, outlineColor: "#050505", outlineWidth: 1 },
 };
 
 let socket;
@@ -95,15 +95,15 @@ function update(nextState) {
 function applyTypography(typography = defaultTypography) {
   for (const section of Object.keys(defaultTypography)) {
     const style = { ...defaultTypography[section], ...typography?.[section] };
+    const outlineWidth = style.outlineEnabled ? style.outlineWidth : 0;
     root.style.setProperty(`--${section}-font-family`, fontStacks[style.fontFamily] ?? fontStacks.system);
     root.style.setProperty(`--${section}-font-size`, `${style.fontSize}px`);
     root.style.setProperty(`--${section}-font-weight`, String(style.bold ? boldWeights[section] : 400));
-    root.style.setProperty(`--${section}-font-style`, style.italic ? "italic" : "normal");
     root.style.setProperty(`--${section}-text-align`, style.textAlign);
     root.style.setProperty(`--${section}-text-color`, style.textColor);
     root.style.setProperty(`--${section}-outline-color`, style.outlineColor);
-    root.style.setProperty(`--${section}-outline-width`, `${style.outlineWidth}px`);
-    root.style.setProperty(`--${section}-outline-offset`, `${-style.outlineWidth}px`);
+    root.style.setProperty(`--${section}-outline-width`, `${outlineWidth}px`);
+    root.style.setProperty(`--${section}-outline-offset`, `${-outlineWidth}px`);
   }
   const stoppedAlignment = typography?.stopped?.textAlign ?? defaultTypography.stopped.textAlign;
   root.style.setProperty("--stopped-content-align", {
