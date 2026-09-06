@@ -1,7 +1,6 @@
 const list = document.querySelector("#queue-list");
 const empty = document.querySelector("#empty-message");
-const queueTitle = document.querySelector("#queue-title");
-const stoppedBanner = document.querySelector("#stopped-banner");
+const queueHeading = document.querySelector("#queue-heading");
 const overlayMessage = document.querySelector("#overlay-message");
 const connection = document.querySelector("#connection-status");
 const root = document.documentElement;
@@ -28,12 +27,15 @@ let hasRendered = false;
 
 function update(nextState) {
   applyTypography(nextState.typography);
-  queueTitle.textContent = nextState.content?.title ?? "等候队列";
-  stoppedBanner.textContent = nextState.content?.stopped ?? "不排了";
+  const isQueueStopped = Boolean(nextState.isQueueStopped);
+  queueHeading.textContent = isQueueStopped
+    ? nextState.content?.stopped ?? "不排了"
+    : nextState.content?.title ?? "等候队列";
+  queueHeading.classList.toggle("stopped", isQueueStopped);
+  queueHeading.dataset.mode = isQueueStopped ? "stopped" : "title";
   const message = nextState.message ?? "";
   overlayMessage.textContent = message;
   overlayMessage.hidden = !message;
-  stoppedBanner.hidden = !nextState.isQueueStopped;
   const nextItems = nextState.items;
   const nextIds = new Set(nextItems.map((item) => item.id));
   const currentNodes = new Map(
@@ -105,12 +107,6 @@ function applyTypography(typography = defaultTypography) {
     root.style.setProperty(`--${section}-outline-width`, `${outlineWidth}px`);
     root.style.setProperty(`--${section}-outline-offset`, `${-outlineWidth}px`);
   }
-  const stoppedAlignment = typography?.stopped?.textAlign ?? defaultTypography.stopped.textAlign;
-  root.style.setProperty("--stopped-content-align", {
-    left: "flex-start",
-    center: "center",
-    right: "flex-end",
-  }[stoppedAlignment]);
 }
 
 function createItem(item) {

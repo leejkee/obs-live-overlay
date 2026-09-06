@@ -95,7 +95,7 @@ function setState(nextState) {
   elements.dequeue.disabled = !state.currentId;
   elements.stopToggle.classList.toggle("active", state.isQueueStopped);
   elements.stopToggle.setAttribute("aria-checked", String(state.isQueueStopped));
-  elements.stopToggleLabel.textContent = state.isQueueStopped ? "已开启" : "已关闭";
+  elements.stopToggleLabel.textContent = state.isQueueStopped ? "显示停止提示" : "显示队列标题";
   if (document.activeElement !== elements.messageInput) elements.messageInput.value = state.message ?? "";
   for (const input of elements.contentInputs) {
     if (document.activeElement !== input) input.value = state.content?.[input.dataset.overlayContentInput] ?? "";
@@ -233,7 +233,8 @@ function selectTypographySection(section) {
   elements.typographyEditor.dataset.typographySection = section;
   elements.typographySectionLabel.textContent = typographySectionLabels[section];
   for (const card of elements.contentSections) {
-    card.classList.toggle("selected", card.dataset.contentSection === section);
+    const cardSections = (card.dataset.contentSections ?? card.dataset.contentSection ?? "").split(" ");
+    card.classList.toggle("selected", cardSections.includes(section));
   }
   for (const selector of elements.sectionSelectors) {
     const selected = selector.dataset.selectSection === section;

@@ -104,22 +104,54 @@
               </div>
             </section>
 
-            <section class="content-card" data-content-section="title" aria-labelledby="title-heading">
+            <section class="content-card heading-card" data-content-sections="title stopped" aria-labelledby="heading-card-title">
               <header class="content-card-header">
                 <span class="block-index">02</span>
                 <div>
-                  <h2 id="title-heading">队列标题</h2>
-                  <p>Overlay 顶部左侧的标题文案</p>
+                  <h2 id="heading-card-title">顶部状态</h2>
+                  <p>关闭时显示队列标题，开启时切换为停止排队提示</p>
                 </div>
-                <button class="section-select-button" type="button" data-select-section="title" aria-pressed="false">编辑字体</button>
+                <button id="stop-toggle" class="toggle-button" type="button" role="switch" aria-checked="false">
+                  <span class="toggle-track" aria-hidden="true"><span class="toggle-thumb"></span></span>
+                  <span id="stop-toggle-label">显示队列标题</span>
+                </button>
               </header>
-              <form class="content-form" data-overlay-content-form="title">
-                <label class="field-label" for="queue-title-input">显示内容</label>
-                <div class="input-actions">
-                  <input id="queue-title-input" data-overlay-content-input="title" maxlength="40" autocomplete="off" required />
-                  <button class="primary-button" type="submit">保存</button>
+
+              <div class="heading-settings">
+                <div class="heading-setting" data-heading-mode="title">
+                  <div class="heading-setting-label">
+                    <div>
+                      <strong>队列标题</strong>
+                      <span>停止排队关闭时显示</span>
+                    </div>
+                    <button class="section-select-button" type="button" data-select-section="title" aria-pressed="false">编辑字体</button>
+                  </div>
+                  <form class="content-form" data-overlay-content-form="title">
+                    <label class="field-label" for="queue-title-input">显示内容</label>
+                    <div class="input-actions">
+                      <input id="queue-title-input" data-overlay-content-input="title" maxlength="40" autocomplete="off" required />
+                      <button class="primary-button" type="submit">保存</button>
+                    </div>
+                  </form>
                 </div>
-              </form>
+
+                <div class="heading-setting" data-heading-mode="stopped">
+                  <div class="heading-setting-label">
+                    <div>
+                      <strong>停止排队提示</strong>
+                      <span>停止排队开启时显示</span>
+                    </div>
+                    <button class="section-select-button" type="button" data-select-section="stopped" aria-pressed="false">编辑字体</button>
+                  </div>
+                  <form class="content-form" data-overlay-content-form="stopped">
+                    <label class="field-label" for="stopped-content-input">显示内容</label>
+                    <div class="input-actions">
+                      <input id="stopped-content-input" data-overlay-content-input="stopped" maxlength="40" autocomplete="off" required />
+                      <button class="primary-button" type="submit">保存</button>
+                    </div>
+                  </form>
+                </div>
+              </div>
             </section>
 
             <section class="content-card" data-content-section="message" aria-labelledby="message-heading">
@@ -127,7 +159,7 @@
                 <span class="block-index">03</span>
                 <div>
                   <h2 id="message-heading">Overlay 消息</h2>
-                  <p>位于标题下方，留空时自动隐藏</p>
+                  <p>位于顶部状态下方，留空时自动隐藏</p>
                 </div>
                 <button class="section-select-button" type="button" data-select-section="message" aria-pressed="false">编辑字体</button>
               </header>
@@ -141,29 +173,6 @@
               </form>
             </section>
 
-            <section class="content-card" data-content-section="stopped" aria-labelledby="stop-heading">
-              <header class="content-card-header">
-                <span class="block-index">04</span>
-                <div>
-                  <h2 id="stop-heading">停止排队提示</h2>
-                  <p>Overlay 标题右侧的醒目状态横幅</p>
-                </div>
-                <div class="header-actions">
-                  <button class="section-select-button" type="button" data-select-section="stopped" aria-pressed="false">编辑字体</button>
-                  <button id="stop-toggle" class="toggle-button" type="button" role="switch" aria-checked="false">
-                    <span class="toggle-track" aria-hidden="true"><span class="toggle-thumb"></span></span>
-                    <span id="stop-toggle-label">已关闭</span>
-                  </button>
-                </div>
-              </header>
-              <form class="content-form" data-overlay-content-form="stopped">
-                <label class="field-label" for="stopped-content-input">显示内容</label>
-                <div class="input-actions">
-                  <input id="stopped-content-input" data-overlay-content-input="stopped" maxlength="40" autocomplete="off" required />
-                  <button class="primary-button" type="submit">保存</button>
-                </div>
-              </form>
-            </section>
           </div>
 
           <aside class="style-panel" aria-labelledby="style-panel-heading">
