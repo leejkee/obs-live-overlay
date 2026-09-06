@@ -26,7 +26,6 @@
   --stopped-font-size: 27px;
   --stopped-font-weight: 900;
   --stopped-text-align: center;
-  --stopped-content-align: center;
   --stopped-text-color: #fff;
   --stopped-outline-color: #050505;
   --stopped-outline-width: 1px;
@@ -49,10 +48,9 @@ body { padding: 6px; }
 .title-area { padding-bottom: 4px; border-bottom: 2px solid #fff; }
 .overlay-message { --render-color: var(--message-text-color); --render-outline-color: var(--message-outline-color); --render-outline-width: var(--message-outline-width); --render-outline-offset: var(--message-outline-offset); margin: 3px 4px 0; overflow-wrap: anywhere; font-family: var(--message-font-family); font-size: var(--message-font-size); font-weight: var(--message-font-weight); line-height: 1.12; text-align: var(--message-text-align); }
 .overlay-message[hidden] { display: none; }
-.queue-header { display: grid; grid-template-columns: minmax(118px, 2fr) minmax(0, 3fr); align-items: stretch; gap: 10px; min-height: 48px; padding: 0 2px 0 4px; }
-h1 { --render-color: var(--title-text-color); --render-outline-color: var(--title-outline-color); --render-outline-width: var(--title-outline-width); --render-outline-offset: var(--title-outline-offset); align-self: center; margin: 0; font-family: var(--title-font-family); font-size: var(--title-font-size); font-weight: var(--title-font-weight); line-height: 1; letter-spacing: -.03em; text-align: var(--title-text-align); white-space: nowrap; }
-.stopped-banner { --render-color: var(--stopped-text-color); --render-outline-color: var(--stopped-outline-color); --render-outline-width: var(--stopped-outline-width); --render-outline-offset: var(--stopped-outline-offset); display: flex; align-items: center; justify-content: var(--stopped-content-align); min-width: 0; padding: 5px 14px; font-family: var(--stopped-font-family); font-size: var(--stopped-font-size); font-weight: var(--stopped-font-weight); line-height: 1; letter-spacing: .14em; text-align: var(--stopped-text-align); text-indent: .14em; border: 0; outline: 0; background: transparent; }
-.stopped-banner[hidden] { display: none; }
+.queue-header { display: flex; align-items: stretch; min-height: 48px; padding: 0 4px; }
+.queue-heading { --render-color: var(--title-text-color); --render-outline-color: var(--title-outline-color); --render-outline-width: var(--title-outline-width); --render-outline-offset: var(--title-outline-offset); align-self: center; width: 100%; margin: 0; font-family: var(--title-font-family); font-size: var(--title-font-size); font-weight: var(--title-font-weight); line-height: 1; letter-spacing: -.03em; text-align: var(--title-text-align); white-space: nowrap; }
+.queue-heading.stopped { --render-color: var(--stopped-text-color); --render-outline-color: var(--stopped-outline-color); --render-outline-width: var(--stopped-outline-width); --render-outline-offset: var(--stopped-outline-offset); padding: 5px 10px; font-family: var(--stopped-font-family); font-size: var(--stopped-font-size); font-weight: var(--stopped-font-weight); letter-spacing: .14em; text-align: var(--stopped-text-align); text-indent: .14em; }
 
 .queue-list { position: relative; list-style: none; margin: 3px 0 0; padding: 0; }
 .queue-item { --render-color: var(--queue-text-color); --render-outline-color: var(--queue-outline-color); --render-outline-width: var(--queue-outline-width); --render-outline-offset: var(--queue-outline-offset); display: grid; grid-template-columns: 31px minmax(0, 1fr) auto; align-items: center; gap: 8px; min-height: 36px; margin: 1px 0; padding: 3px 5px 3px 2px; font-family: var(--queue-font-family); font-weight: var(--queue-font-weight); border: 1px solid transparent; border-bottom-color: rgba(255,255,255,.55); border-radius: 3px; background: transparent; }
@@ -64,9 +62,8 @@ h1 { --render-color: var(--title-text-color); --render-outline-color: var(--titl
 .queue-item.inserting { animation: queue-insert .28s cubic-bezier(.2, .8, .2, 1) both; }
 .queue-item.ejecting { position: absolute; left: 0; z-index: 2; width: 100%; pointer-events: none; animation: queue-eject .34s cubic-bezier(.55, 0, .85, .35) forwards; }
 
-h1,
+.queue-heading,
 .overlay-message,
-.stopped-banner,
 .queue-position,
 .queue-name,
 .current-label,
