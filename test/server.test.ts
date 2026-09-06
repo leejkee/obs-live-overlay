@@ -38,10 +38,12 @@ describe("Overlay Service", () => {
     const controlHtml = await control.text();
     assert.match(controlHtml, /等候队列/);
     assert.equal(controlHtml.match(/data-typography-section=/g)?.length, 1);
-    assert.match(controlHtml, /data-content-section="queue"/);
-    assert.match(controlHtml, /data-content-sections="title stopped"/);
-    assert.match(controlHtml, /data-content-section="message"/);
+    assert.doesNotMatch(controlHtml, /data-content-sections?=/);
     assert.equal(controlHtml.match(/class="content-card(?:\s[^"]*)?"/g)?.length, 3);
+    assert.match(controlHtml, /<dialog id="style-dialog"/);
+    assert.equal(controlHtml.match(/data-select-section=/g)?.length, 4);
+    assert.equal(controlHtml.match(/aria-haspopup="dialog"/g)?.length, 4);
+    assert.doesNotMatch(controlHtml, /content-card[^"\n]*selected|正在编辑/);
     assert.match(controlHtml, /data-overlay-content-form="title"/);
     assert.match(controlHtml, /data-overlay-content-form="stopped"/);
     assert.match(controlHtml, /关闭时显示队列标题，开启时切换为停止排队提示/);
@@ -69,6 +71,9 @@ describe("Overlay Service", () => {
     assert.match(controlScript, /data-outline-width/);
     assert.doesNotMatch(controlScript, /data-format="italic"|style\.italic/);
     assert.match(controlScript, /obs-live-overlay:control-theme/);
+    assert.match(controlScript, /openTypographyEditor\(selector\.dataset\.selectSection\)/);
+    assert.match(controlScript, /styleDialog\.showModal\(\)/);
+    assert.doesNotMatch(controlScript, /contentSections|selectTypographySection|classList\.toggle\("selected"/);
     assert.match(controlScript, /\/api\/overlays\/queue\/current/);
     assert.match(controlScript, /\/api\/overlays\/queue\/content/);
     const controlStyles = await controlCss.text();

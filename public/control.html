@@ -73,7 +73,7 @@
 
         <div class="editor-layout">
           <div class="content-stack">
-            <section class="content-card queue-card selected" data-content-section="queue" aria-labelledby="queue-heading">
+            <section class="content-card queue-card" aria-labelledby="queue-heading">
               <header class="content-card-header queue-card-header">
                 <span class="block-index">01</span>
                 <div>
@@ -81,7 +81,7 @@
                   <p><span id="queue-count">0</span> 位观众正在等待 · 队列顺序固定，可单独指定当前上号</p>
                 </div>
                 <div class="header-actions">
-                  <button class="section-select-button" type="button" data-select-section="queue" aria-pressed="true">正在编辑</button>
+                  <button class="section-select-button" type="button" data-select-section="queue" aria-haspopup="dialog">编辑字体</button>
                   <button id="dequeue-button" class="secondary-button" type="button">当前观众出队</button>
                 </div>
               </header>
@@ -104,7 +104,7 @@
               </div>
             </section>
 
-            <section class="content-card heading-card" data-content-sections="title stopped" aria-labelledby="heading-card-title">
+            <section class="content-card heading-card" aria-labelledby="heading-card-title">
               <header class="content-card-header">
                 <span class="block-index">02</span>
                 <div>
@@ -124,7 +124,7 @@
                       <strong>队列标题</strong>
                       <span>停止排队关闭时显示</span>
                     </div>
-                    <button class="section-select-button" type="button" data-select-section="title" aria-pressed="false">编辑字体</button>
+                    <button class="section-select-button" type="button" data-select-section="title" aria-haspopup="dialog">编辑字体</button>
                   </div>
                   <form class="content-form" data-overlay-content-form="title">
                     <label class="field-label" for="queue-title-input">显示内容</label>
@@ -141,7 +141,7 @@
                       <strong>停止排队提示</strong>
                       <span>停止排队开启时显示</span>
                     </div>
-                    <button class="section-select-button" type="button" data-select-section="stopped" aria-pressed="false">编辑字体</button>
+                    <button class="section-select-button" type="button" data-select-section="stopped" aria-haspopup="dialog">编辑字体</button>
                   </div>
                   <form class="content-form" data-overlay-content-form="stopped">
                     <label class="field-label" for="stopped-content-input">显示内容</label>
@@ -154,14 +154,14 @@
               </div>
             </section>
 
-            <section class="content-card" data-content-section="message" aria-labelledby="message-heading">
+            <section class="content-card" aria-labelledby="message-heading">
               <header class="content-card-header">
                 <span class="block-index">03</span>
                 <div>
                   <h2 id="message-heading">Overlay 消息</h2>
                   <p>位于顶部状态下方，留空时自动隐藏</p>
                 </div>
-                <button class="section-select-button" type="button" data-select-section="message" aria-pressed="false">编辑字体</button>
+                <button class="section-select-button" type="button" data-select-section="message" aria-haspopup="dialog">编辑字体</button>
               </header>
               <form id="message-form" class="content-form">
                 <label class="field-label" for="overlay-message-input">消息内容</label>
@@ -175,18 +175,23 @@
 
           </div>
 
-          <aside class="style-panel" aria-labelledby="style-panel-heading">
-            <div class="style-panel-header">
-              <span class="section-kicker">复用编辑器</span>
-              <h2 id="style-panel-heading">字体样式</h2>
-              <p>当前编辑：<strong id="selected-style-label">队列内容</strong></p>
-            </div>
-            <div id="typography-editor" class="typography-editor" data-typography-section="queue"></div>
-            <p class="style-panel-tip">选择左侧任一内容块，即可在这里调整对应字体。</p>
-          </aside>
         </div>
       </main>
     </div>
+    <dialog id="style-dialog" class="style-dialog" aria-labelledby="style-panel-heading">
+      <div class="style-panel">
+        <div class="style-panel-header">
+          <div>
+            <span class="section-kicker">字体编辑器</span>
+            <h2 id="style-panel-heading">字体样式</h2>
+            <p>当前编辑：<strong id="selected-style-label"></strong></p>
+          </div>
+          <button id="close-style-dialog" class="dialog-close-button" type="button" aria-label="关闭字体样式编辑器">×</button>
+        </div>
+        <div id="typography-editor" class="typography-editor" data-typography-section=""></div>
+        <p class="style-panel-tip">修改会实时应用到 Overlay，并自动保存到当前配置方案。</p>
+      </div>
+    </dialog>
     <div id="toast-region" class="toast-region" aria-live="assertive"></div>
     <script type="module" src="/control.js"></script>
   </body>

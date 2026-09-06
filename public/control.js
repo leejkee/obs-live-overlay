@@ -22,7 +22,8 @@ const elements = {
   toasts: document.querySelector("#toast-region"),
   typographyEditor: document.querySelector("#typography-editor"),
   typographySectionLabel: document.querySelector("#selected-style-label"),
-  contentSections: [...document.querySelectorAll("[data-content-section]")],
+  styleDialog: document.querySelector("#style-dialog"),
+  closeStyleDialog: document.querySelector("#close-style-dialog"),
   sectionSelectors: [...document.querySelectorAll("[data-select-section]")],
   themeOptions: [...document.querySelectorAll("[data-theme-option]")],
 };
@@ -59,7 +60,7 @@ const typographySectionLabels = {
   stopped: "停止排队提示",
 };
 let typographyTimer;
-let selectedTypographySection = "queue";
+let selectedTypographySection = null;
 
 let state = {
   items: [],
@@ -215,39 +216,32 @@ function initializeTypographyEditor() {
   });
 
   for (const selector of elements.sectionSelectors) {
-    selector.addEventListener("click", () => selectTypographySection(selector.dataset.selectSection));
+    selector.addEventListener("click", () => openTypographyEditor(selector.dataset.selectSection));
   }
-  for (const section of elements.contentSections) {
-    section.addEventListener("click", (event) => {
-      if (event.target.closest("button, input, select, form")) return;
-      selectTypographySection(section.dataset.contentSection);
-    });
-  }
-  selectTypographySection(selectedTypographySection);
+  elements.closeStyleDialog.addEventListener("click", () => elements.styleDialog.close());
+  elements.styleDialog.addEventListener("click", (event) => {
+    if (event.target !== elements.styleDialog) return;
+    const bounds = elements.styleDialog.getBoundingClientRect();
+    const inside = event.clientX >= bounds.left && event.clientX <= bounds.right
+      && event.clientY >= bounds.top && event.clientY <= bounds.bottom;
+    if (!inside) elements.styleDialog.close();
+  });
 }
 
-function selectTypographySection(section) {
+function openTypographyEditor(section) {
   if (!defaultTypography[section]) return;
   clearTimeout(typographyTimer);
   selectedTypographySection = section;
   elements.typographyEditor.dataset.typographySection = section;
   elements.typographySectionLabel.textContent = typographySectionLabels[section];
-  for (const card of elements.contentSections) {
-    const cardSections = (card.dataset.contentSections ?? card.dataset.contentSection ?? "").split(" ");
-    card.classList.toggle("selected", cardSections.includes(section));
-  }
-  for (const selector of elements.sectionSelectors) {
-    const selected = selector.dataset.selectSection === section;
-    selector.setAttribute("aria-pressed", String(selected));
-    selector.textContent = selected ? "正在编辑" : "编辑字体";
-  }
   setTypographySaveState(elements.typographyEditor, "idle");
   syncTypographyEditor();
+  if (!elements.styleDialog.open) elements.styleDialog.showModal();
 }
 
 function syncTypographyEditor() {
   const editor = elements.typographyEditor;
-  if (!editor.querySelector("[data-font-family]")) return;
+  if (!selectedTypographySection || !editor.querySelector("[data-font-family]")) return;
   const style = { ...defaultTypography[selectedTypographySection], ...state.typography?.[selectedTypographySection] };
   editor.querySelector("[data-font-family]").value = style.fontFamily;
   editor.querySelector("[data-font-size]").value = String(style.fontSize);

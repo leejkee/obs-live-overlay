@@ -80,4 +80,4 @@ npm uninstall --global @leejkee/obs-live-overlay
 
 ## 开发文档
 
-项目架构与实现说明见 [设计文档](docs/design.md)。
+项目架构与实现说明见 [设计文档](docs/design.md)，版本发布流程见 [Release 规则](RELEASE.md)。
