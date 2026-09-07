@@ -50,7 +50,7 @@ flowchart LR
 - 标题、消息、停止提示和队列四个区域的字体样式；
 - 用于标识状态变化的 `revision`。
 
-`currentId` 与数组顺序分离，因此临时指定当前用户不会重排队列。当前用户出队后，优先选择其原位置的下一位，再回到队首。
+`currentId` 用于标识当前上号用户。指定当前用户时会将其移动到队首；手动调整队列顺序时仍按 ID 保持当前用户标记。当前用户出队后，优先选择其原位置的下一位，再回到队首。
 
 字体样式以结构化字段保存。描边由 `outlineEnabled` 独立控制，颜色和宽度仅描述开启后的效果。Profile 数据包含格式版本；加载旧版本时会补充缺失字段并迁移旧描边设置。
 
@@ -59,7 +59,7 @@ flowchart LR
 | 路径 | 用途 |
 | --- | --- |
 | `GET /api/overlays/queue/state` | 获取当前完整状态 |
-| `/api/overlays/queue/items`、`dequeue`、`current` | 入队、当前用户出队、指定当前用户 |
+| `/api/overlays/queue/items`、`items/order`、`dequeue`、`current` | 入队、调整顺序、当前用户出队、指定当前用户 |
 | `/api/overlays/queue/message`、`stopped`、`content/*` | 修改提示状态和固定文案 |
 | `/api/overlays/queue/typography/*` | 修改指定区域的字体样式 |
 | `/api/profiles`、`/api/profiles/active` | 创建、管理和切换 Profile |

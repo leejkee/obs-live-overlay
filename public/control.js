@@ -2,10 +2,13 @@ const elements = {
   form: document.querySelector("#add-form"),
   id: document.querySelector("#viewer-id"),
   list: document.querySelector("#queue-list"),
+  queueOrganizer: document.querySelector("#queue-organizer"),
   empty: document.querySelector("#empty-state"),
   count: document.querySelector("#queue-count"),
   navCount: document.querySelector("#nav-count"),
   dequeue: document.querySelector("#dequeue-button"),
+  moveUp: document.querySelector("#move-up-button"),
+  moveDown: document.querySelector("#move-down-button"),
   profileSelect: document.querySelector("#profile-select"),
   createProfile: document.querySelector("#create-profile-button"),
   renameProfile: document.querySelector("#rename-profile-button"),
@@ -61,6 +64,7 @@ const typographySectionLabels = {
 };
 let typographyTimer;
 let selectedTypographySection = null;
+let selectedQueueItemId = null;
 
 let state = {
   items: [],
@@ -92,7 +96,8 @@ function setState(nextState) {
   elements.count.textContent = String(state.items.length);
   elements.navCount.textContent = String(state.items.length);
   elements.empty.hidden = hasItems;
-  elements.list.hidden = !hasItems;
+  elements.queueOrganizer.hidden = !hasItems;
+  if (!state.items.some((item) => item.id === selectedQueueItemId)) selectedQueueItemId = null;
   elements.dequeue.disabled = !state.currentId;
   elements.stopToggle.classList.toggle("active", state.isQueueStopped);
   elements.stopToggle.setAttribute("aria-checked", String(state.isQueueStopped));
@@ -103,6 +108,7 @@ function setState(nextState) {
   }
   elements.clearMessage.disabled = !(state.message ?? "");
   elements.list.replaceChildren(...state.items.map(createRow));
+  updateQueueOrderControls();
   syncTypographyEditor();
 }
 
@@ -341,7 +347,21 @@ function applyServerMessage(message) {
 
 function createRow(item, index) {
   const row = document.createElement("li");
-  row.className = `queue-row${item.id === state.currentId ? " current" : ""}`;
+  const isSelected = item.id === selectedQueueItemId;
+  row.className = `queue-row${item.id === state.currentId ? " current" : ""}${isSelected ? " selected" : ""}`;
+  row.dataset.itemId = item.id;
+  row.dataset.accessibleLabel = `${item.id}，序号 ${index + 1}${item.id === state.currentId ? "，当前上号" : ""}`;
+  row.tabIndex = 0;
+  updateQueueRowAccessibility(row, isSelected);
+  row.addEventListener("click", (event) => {
+    if (event.target.closest("button")) return;
+    selectQueueItem(item.id);
+  });
+  row.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    selectQueueItem(item.id);
+  });
 
   const position = document.createElement("span");
   position.className = "position";
@@ -375,6 +395,34 @@ function createRow(item, index) {
   return row;
 }
 
+function selectQueueItem(id) {
+  selectedQueueItemId = id;
+  for (const row of elements.list.querySelectorAll(".queue-row")) {
+    const isSelected = row.dataset.itemId === id;
+    row.classList.toggle("selected", isSelected);
+    updateQueueRowAccessibility(row, isSelected);
+  }
+  updateQueueOrderControls();
+}
+
+function updateQueueRowAccessibility(row, isSelected) {
+  row.setAttribute("aria-label", `${row.dataset.accessibleLabel}${isSelected ? "，已选择" : "，按回车选择"}`);
+}
+
+function updateQueueOrderControls() {
+  const selectedIndex = state.items.findIndex((item) => item.id === selectedQueueItemId);
+  elements.moveUp.disabled = selectedIndex <= 0;
+  elements.moveDown.disabled = selectedIndex < 0 || selectedIndex >= state.items.length - 1;
+}
+
+function moveSelectedQueueItem(direction) {
+  if (!selectedQueueItemId) return;
+  act(() => request("/api/overlays/queue/items/order", {
+    method: "PUT",
+    body: JSON.stringify({ id: selectedQueueItemId, direction }),
+  }));
+}
+
 async function act(operation) {
   try {
     setState(await operation());
@@ -400,6 +448,9 @@ elements.form.addEventListener("submit", async (event) => {
 elements.dequeue.addEventListener("click", () => {
   act(() => request("/api/overlays/queue/dequeue", { method: "POST" }));
 });
+
+elements.moveUp.addEventListener("click", () => moveSelectedQueueItem("up"));
+elements.moveDown.addEventListener("click", () => moveSelectedQueueItem("down"));
 
 elements.messageForm.addEventListener("submit", (event) => {
   event.preventDefault();

@@ -113,6 +113,12 @@ export async function createOverlayServer(options: { dataFile?: string; shutdown
       broadcast();
       return json(response, 200, manager.activeQueueState());
     }
+    if (method === "PUT" && url.pathname === `/api/overlays/${overlayId}/items/order`) {
+      const body = await readJson(request);
+      await manager.updateActiveQueue((queue) => { queue.move(body.id, body.direction); });
+      broadcast();
+      return json(response, 200, manager.activeQueueState());
+    }
     if (method === "PUT" && url.pathname === `/api/overlays/${overlayId}/current`) {
       const body = await readJson(request);
       await manager.updateActiveQueue((queue) => { queue.setCurrent(body.id); });
