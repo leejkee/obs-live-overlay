@@ -11,6 +11,7 @@ export type FontFamily = typeof fontFamilies[number];
 export type TextAlignment = typeof textAlignments[number];
 export type TypographySection = typeof typographySections[number];
 export type ContentSection = typeof contentSections[number];
+export type QueueMoveDirection = "up" | "down";
 
 export interface TextStyle {
   fontFamily: FontFamily;
@@ -113,10 +114,30 @@ export class QueueStore {
 
   setCurrent(value: unknown): QueueItem {
     const id = normalizeId(value);
-    const item = this.#items.find((candidate) => candidate.id === id);
-    if (!item) throw new NotFoundError("该 ID 不在队列中");
-    if (this.#currentId !== id) {
+    const currentIndex = this.#items.findIndex((candidate) => candidate.id === id);
+    if (currentIndex < 0) throw new NotFoundError("该 ID 不在队列中");
+    const item = this.#items[currentIndex];
+    if (this.#currentId !== id || currentIndex !== 0) {
+      if (currentIndex !== 0) {
+        this.#items.splice(currentIndex, 1);
+        this.#items.unshift(item);
+      }
       this.#currentId = id;
+      this.#revision += 1;
+    }
+    return { ...item };
+  }
+
+  move(value: unknown, directionValue: unknown): QueueItem {
+    const id = normalizeId(value);
+    const direction = normalizeMoveDirection(directionValue);
+    const currentIndex = this.#items.findIndex((candidate) => candidate.id === id);
+    if (currentIndex < 0) throw new NotFoundError("该 ID 不在队列中");
+    const targetIndex = currentIndex + (direction === "up" ? -1 : 1);
+    const item = this.#items[currentIndex];
+    if (targetIndex >= 0 && targetIndex < this.#items.length) {
+      this.#items.splice(currentIndex, 1);
+      this.#items.splice(targetIndex, 0, item);
       this.#revision += 1;
     }
     return { ...item };
@@ -304,6 +325,13 @@ function normalizeId(value: unknown): string {
   if (!id) throw new ValidationError("ID 不能为空");
   if (id.length > 80) throw new ValidationError("ID 不能超过 80 个字符");
   return id;
+}
+
+function normalizeMoveDirection(value: unknown): QueueMoveDirection {
+  if (value !== "up" && value !== "down") {
+    throw new ValidationError("移动方向必须是 up 或 down");
+  }
+  return value;
 }
 
 export class ValidationError extends Error {}

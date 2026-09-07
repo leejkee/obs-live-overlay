@@ -33,7 +33,7 @@ obs-live-overlay
 - 控制台：<http://127.0.0.1:3000/control>
 - OBS Overlay：<http://127.0.0.1:3000/overlay/queue>
 
-将 Overlay 地址添加为 OBS 的 Browser Source。页面背景透明，可以直接叠加到直播画面。控制台支持管理队列、指定当前用户、修改显示文案和字体样式；按 `Ctrl+C` 停止服务。
+将 Overlay 地址添加为 OBS 的 Browser Source。页面背景透明，可以直接叠加到直播画面。控制台支持点击选择用户并通过上下箭头调整顺序；指定当前用户时会将其移到队首。显示文案和字体样式也可实时修改；按 `Ctrl+C` 停止服务。
 
 ### 常用选项
 

@@ -32,14 +32,14 @@ describe("QueueStore", () => {
     assert.deepEqual(store.snapshot().items, [{ id: "Viewer" }]);
   });
 
-  it("切换当前上号用户时保持队列顺序，并从当前位置继续出队", () => {
+  it("切换当前上号用户时将其移到队首", () => {
     const store = new QueueStore();
     store.enqueue("User-A");
     store.enqueue("User-B");
     store.enqueue("User-C");
 
     assert.equal(store.setCurrent("User-B").id, "User-B");
-    assert.deepEqual(store.snapshot().items.map((item) => item.id), ["User-A", "User-B", "User-C"]);
+    assert.deepEqual(store.snapshot().items.map((item) => item.id), ["User-B", "User-A", "User-C"]);
     assert.equal(store.snapshot().currentId, "User-B");
     assert.equal(store.snapshot().revision, 4);
     store.setCurrent("User-B");
@@ -48,9 +48,27 @@ describe("QueueStore", () => {
 
     assert.equal(store.dequeue()?.id, "User-B");
     assert.deepEqual(store.snapshot().items.map((item) => item.id), ["User-A", "User-C"]);
-    assert.equal(store.snapshot().currentId, "User-C");
-    assert.equal(store.dequeue()?.id, "User-C");
     assert.equal(store.snapshot().currentId, "User-A");
+  });
+
+  it("按方向调整用户顺序并在边界保持不变", () => {
+    const store = new QueueStore();
+    store.enqueue("User-A");
+    store.enqueue("User-B");
+    store.enqueue("User-C");
+
+    assert.equal(store.move("User-C", "up").id, "User-C");
+    assert.deepEqual(store.snapshot().items.map((item) => item.id), ["User-A", "User-C", "User-B"]);
+    assert.equal(store.snapshot().revision, 4);
+    store.move("User-C", "up");
+    assert.deepEqual(store.snapshot().items.map((item) => item.id), ["User-C", "User-A", "User-B"]);
+    store.move("User-C", "up");
+    assert.equal(store.snapshot().revision, 5);
+    store.move("User-C", "down");
+    assert.deepEqual(store.snapshot().items.map((item) => item.id), ["User-A", "User-C", "User-B"]);
+    assert.equal(store.snapshot().currentId, "User-A");
+    assert.throws(() => store.move("Missing", "up"), NotFoundError);
+    assert.throws(() => store.move("User-A", "sideways"), ValidationError);
   });
 
   it("拒绝空 ID 和重复 ID", () => {

@@ -1,6 +1,6 @@
 {
   "name": "@leejkee/obs-live-overlay",
-  "version": "0.5.2",
+  "version": "0.6.0",
   "description": "由本地控制台管理、用于 OBS Browser Source 的实时等候队列 Overlay",
   "type": "module",
   "bin": {
@@ -20,7 +20,8 @@
     "pack:local": "npm pack",
     "test": "tsx --test test/*.test.ts",
     "check": "tsc -p tsconfig.json --noEmit",
-    "verify": "npm run check && npm test && npm run build"
+    "verify": "npm run check && npm test && npm run build",
+    "screenshots:release": "npm run build && node scripts/capture-release-screenshots.mjs"
   },
   "dependencies": {
     "ws": "^8.18.3"

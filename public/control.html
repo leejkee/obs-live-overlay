@@ -43,7 +43,7 @@
           <div>
             <p class="eyebrow">QUEUE OVERLAY</p>
             <h1>等候队列</h1>
-            <p class="subtitle">输入 ID 加入队列，队首会自动成为当前观众</p>
+            <p class="subtitle">输入 ID 加入队列，选中用户后可手动调整排队顺序</p>
           </div>
           <a class="preview-link" href="/overlay/queue" target="_blank" rel="noreferrer">打开 Overlay ↗</a>
         </header>
@@ -78,7 +78,7 @@
                 <span class="block-index">01</span>
                 <div>
                   <h2 id="queue-heading">队列内容</h2>
-                  <p><span id="queue-count">0</span> 位观众正在等待 · 队列顺序固定，可单独指定当前上号</p>
+                  <p><span id="queue-count">0</span> 位观众正在等待 · 指定当前上号会自动移到队首</p>
                 </div>
                 <div class="header-actions">
                   <button class="section-select-button" type="button" data-select-section="queue" aria-haspopup="dialog">编辑字体</button>
@@ -100,7 +100,14 @@
                   <h3>队列还是空的</h3>
                   <p>输入第一个观众 ID 开始排队</p>
                 </div>
-                <ol id="queue-list" class="queue-list" aria-live="polite"></ol>
+                <div id="queue-organizer" class="queue-organizer" hidden>
+                  <ol id="queue-list" class="queue-list" aria-label="排队用户" aria-live="polite"></ol>
+                  <div class="queue-order-controls" role="group" aria-label="调整选中用户的排队顺序">
+                    <span>调整顺序</span>
+                    <button id="move-up-button" class="queue-move-button" type="button" aria-label="上移选中用户" title="上移" disabled>↑</button>
+                    <button id="move-down-button" class="queue-move-button" type="button" aria-label="下移选中用户" title="下移" disabled>↓</button>
+                  </div>
+                </div>
               </div>
             </section>
 

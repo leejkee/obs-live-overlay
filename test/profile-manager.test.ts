@@ -50,7 +50,7 @@ describe("ProfileManager", () => {
     await manager.activateProfile(profile.id);
     const restored = await ProfileManager.load(file);
     assert.equal(restored.activeProfile().name, "周末场");
-    assert.deepEqual(restored.activeQueueState().items, [{ id: "User-A" }, { id: "User-B" }]);
+    assert.deepEqual(restored.activeQueueState().items, [{ id: "User-B" }, { id: "User-A" }]);
     assert.equal(restored.activeQueueState().currentId, "User-B");
     assert.equal(restored.activeQueueState().message, "欢迎");
     assert.deepEqual(restored.activeQueueState().content, { title: "周末等候队列", stopped: "本场已满" });

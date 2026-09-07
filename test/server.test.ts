@@ -49,6 +49,8 @@ describe("Overlay Service", () => {
     assert.match(controlHtml, /关闭时显示队列标题，开启时切换为停止排队提示/);
     assert.match(controlHtml, /data-theme-option="light"/);
     assert.match(controlHtml, /data-theme-option="dark"/);
+    assert.match(controlHtml, /id="move-up-button"/);
+    assert.match(controlHtml, /id="move-down-button"/);
     assert.equal(overlay.status, 200);
     const overlayHtml = await overlay.text();
     assert.match(overlayHtml, /queue-list/);
@@ -73,8 +75,10 @@ describe("Overlay Service", () => {
     assert.match(controlScript, /obs-live-overlay:control-theme/);
     assert.match(controlScript, /openTypographyEditor\(selector\.dataset\.selectSection\)/);
     assert.match(controlScript, /styleDialog\.showModal\(\)/);
-    assert.doesNotMatch(controlScript, /contentSections|selectTypographySection|classList\.toggle\("selected"/);
+    assert.doesNotMatch(controlScript, /contentSections|selectTypographySection/);
+    assert.match(controlScript, /row\.classList\.toggle\("selected", isSelected\)/);
     assert.match(controlScript, /\/api\/overlays\/queue\/current/);
+    assert.match(controlScript, /\/api\/overlays\/queue\/items\/order/);
     assert.match(controlScript, /\/api\/overlays\/queue\/content/);
     const controlStyles = await controlCss.text();
     assert.match(controlStyles, /:root\[data-theme="light"\]/);
@@ -209,7 +213,7 @@ describe("Overlay Service", () => {
     assert.equal(invalidResponse.status, 400);
   });
 
-  it("指定当前上号用户时不改变队列顺序，并支持当前用户出队", async () => {
+  it("指定当前上号用户时移到队首，并支持手动调整顺序和当前用户出队", async () => {
     await fetch(`${baseUrl}/api/overlays/queue/items`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -227,10 +231,22 @@ describe("Overlay Service", () => {
     });
     assert.equal(response.status, 200);
     const state = await response.json();
-    assert.deepEqual(state.items.map((item: { id: string }) => item.id), ["User-A", "User-B"]);
+    assert.deepEqual(state.items.map((item: { id: string }) => item.id), ["User-B", "User-A"]);
     assert.equal(state.currentId, "User-B");
     const message = JSON.parse(await broadcastPromise);
     assert.equal(message.state.currentId, "User-B");
+
+    const orderBroadcastPromise = onceMessage(socket);
+    const orderResponse = await fetch(`${baseUrl}/api/overlays/queue/items/order`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: "User-A", direction: "up" }),
+    });
+    assert.equal(orderResponse.status, 200);
+    const orderedState = await orderResponse.json();
+    assert.deepEqual(orderedState.items.map((item: { id: string }) => item.id), ["User-A", "User-B"]);
+    assert.equal(orderedState.currentId, "User-B");
+    assert.deepEqual(JSON.parse(await orderBroadcastPromise).state.items, [{ id: "User-A" }, { id: "User-B" }]);
 
     const dequeueResponse = await fetch(`${baseUrl}/api/overlays/queue/dequeue`, { method: "POST" });
     const dequeuedState = await dequeueResponse.json();
@@ -244,6 +260,13 @@ describe("Overlay Service", () => {
       body: JSON.stringify({ id: "Missing" }),
     });
     assert.equal(missingResponse.status, 404);
+
+    const invalidDirectionResponse = await fetch(`${baseUrl}/api/overlays/queue/items/order`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: "User-A", direction: "sideways" }),
+    });
+    assert.equal(invalidDirectionResponse.status, 400);
   });
 
   it("更新字体设置并通过 WebSocket 广播", async () => {
