@@ -244,12 +244,12 @@ async function waitForOverlay(expected: boolean, context: ReturnType<typeof star
 
 async function checkOverlay(): Promise<boolean> {
   try {
-    const response = await fetch(`${startupUrl}/api/overlays`, {
-      signal: AbortSignal.timeout(750),
-    });
+    const response = await fetch(`${startupUrl}/api/overlays`, { signal: AbortSignal.timeout(750) });
     if (!response.ok) return false;
     const payload = await response.json();
-    return Array.isArray(payload) && payload.some((item) => item?.id === "queue");
+    return Array.isArray(payload)
+      && payload.some((item) => item?.id === "queue")
+      && payload.some((item) => item?.id === "music");
   } catch {
     return false;
   }

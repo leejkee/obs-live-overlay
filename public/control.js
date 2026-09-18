@@ -51,6 +51,26 @@ for (const option of elements.themeOptions) {
 
 setTheme(document.documentElement.dataset.theme);
 
+const controlViews = [...document.querySelectorAll("[data-control-view]")];
+const controlPages = [...document.querySelectorAll("[data-control-page]")];
+function showControlView(view, updateLocation = true) {
+  const selected = view === "music" ? "music" : "queue";
+  for (const button of controlViews) {
+    const active = button.dataset.controlView === selected;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", String(active));
+  }
+  for (const page of controlPages) page.hidden = page.dataset.controlPage !== selected;
+  if (updateLocation) {
+    const url = new URL(location.href);
+    if (selected === "music") url.searchParams.set("view", "music");
+    else url.searchParams.delete("view");
+    history.replaceState(null, "", url);
+  }
+}
+for (const button of controlViews) button.addEventListener("click", () => showControlView(button.dataset.controlView));
+showControlView(new URL(location.href).searchParams.get("view"), false);
+
 const defaultTypography = {
   title: { fontFamily: "system", fontSize: 30, bold: true, textAlign: "left", textColor: "#ffffff", outlineEnabled: true, outlineColor: "#050505", outlineWidth: 1 },
   message: { fontFamily: "system", fontSize: 22, bold: true, textAlign: "left", textColor: "#ffffff", outlineEnabled: true, outlineColor: "#050505", outlineWidth: 1 },

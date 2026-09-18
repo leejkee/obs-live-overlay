@@ -6,10 +6,18 @@ import { dirname, extname, join } from "node:path";
 import { WebSocket, WebSocketServer } from "ws";
 import { ConflictError, NotFoundError, ValidationError } from "./queue-store.js";
 import { ProfileConflictError, ProfileManager, ProfileNotFoundError } from "./profile-manager.js";
+import { coverContentType } from "./music-service.js";
 
 const currentDirectory = dirname(fileURLToPath(import.meta.url));
 const publicDirectory = join(currentDirectory, "..", "public");
 const overlayId = "queue";
+
+interface MusicController {
+  snapshot(): unknown;
+  update(input: unknown): Promise<unknown>;
+  getThumbnail(sessionId: string, thumbnailId: string): Promise<{ data: Buffer } | null>;
+  overlayUrl: string;
+}
 
 const mimeTypes: Record<string, string> = {
   ".css": "text/css; charset=utf-8",
@@ -18,7 +26,11 @@ const mimeTypes: Record<string, string> = {
   ".svg": "image/svg+xml",
 };
 
-export async function createOverlayServer(options: { dataFile?: string; shutdownToken?: string } = {}) {
+export async function createOverlayServer(options: {
+  dataFile?: string;
+  shutdownToken?: string;
+  music?: MusicController;
+} = {}) {
   const profiles = await ProfileManager.load(options.dataFile ?? join(currentDirectory, "..", "data", "profiles.json"));
   const server = createServer(async (request, response) => {
     try {
@@ -62,10 +74,46 @@ export async function createOverlayServer(options: { dataFile?: string; shutdown
     const url = new URL(request.url ?? "/", "http://localhost");
 
     if (method === "GET" && url.pathname === "/api/overlays") {
-      return json(response, 200, [{ id: overlayId, type: "queue", title: "等候队列" }]);
+      return json(response, 200, [
+        { id: overlayId, type: "queue", title: "等候队列" },
+        ...(options.music ? [{ id: "music", type: "music", title: "正在播放" }] : []),
+      ]);
     }
     if (method === "GET" && url.pathname === `/api/overlays/${overlayId}/state`) {
       return json(response, 200, manager.activeQueueState());
+    }
+    if (method === "GET" && url.pathname === "/api/overlays/music/state" && options.music) {
+      return json(response, 200, { ...(options.music.snapshot() as object), overlayUrl: options.music.overlayUrl });
+    }
+    if (method === "PATCH" && url.pathname === "/api/overlays/music/settings" && options.music) {
+      return json(response, 200, {
+        ...(await options.music.update(await readJson(request)) as object),
+        overlayUrl: options.music.overlayUrl,
+      });
+    }
+    if (method === "GET" && url.pathname === "/api/music/state" && options.music) {
+      return json(response, 200, options.music.snapshot());
+    }
+    if ((method === "GET" || method === "HEAD") && url.pathname === "/api/music/cover" && options.music) {
+      const image = await options.music.getThumbnail(
+        url.searchParams.get("session") ?? "",
+        url.searchParams.get("token") ?? "",
+      );
+      if (!image) throw new NotFoundError("封面不存在");
+      const contentType = coverContentType(image.data);
+      if (!contentType) {
+        response.writeHead(415, { "Cache-Control": "no-store" });
+        response.end();
+        return;
+      }
+      response.writeHead(200, {
+        "Content-Type": contentType,
+        "X-Content-Type-Options": "nosniff",
+        "Cache-Control": "no-store",
+        "Content-Length": image.data.length,
+      });
+      response.end(method === "HEAD" ? undefined : image.data);
+      return;
     }
     if (method === "GET" && url.pathname === "/api/profiles") {
       return json(response, 200, manager.profilesSnapshot());
@@ -164,7 +212,18 @@ export async function createOverlayServer(options: { dataFile?: string; shutdown
     if (url.pathname === `/overlay/${overlayId}` || url.pathname === `/overlay/${overlayId}/`) {
       return serveFile(response, "overlay.html", method === "HEAD");
     }
-    if (url.pathname === "/typography-editor.js") return serveFile(response, "typography-editor.js", method === "HEAD");
+    if (options.music && (url.pathname === "/overlay/music" || url.pathname === "/overlay/music/")) {
+      return serveFile(response, "music.html", method === "HEAD");
+    }
+    if ([
+      "/typography-editor.js",
+      "/music-control.js",
+      "/music-control.css",
+      "/music.js",
+      "/music.css",
+    ].includes(url.pathname)) {
+      return serveFile(response, url.pathname.slice(1), method === "HEAD");
+    }
     if (/^\/(control|overlay)\.(js|css)$/.test(url.pathname)) {
       return serveFile(response, url.pathname.slice(1), method === "HEAD");
     }
@@ -241,6 +300,13 @@ function redirect(response: ServerResponse, location: string) {
 
 function handleError(error: unknown, response: ServerResponse) {
   if (response.headersSent) return response.end();
+  const code = (error as { code?: string })?.code;
+  if (code === "ERR_SMTC_STALE_SESSION" || code === "ERR_SMTC_STALE_THUMBNAIL") {
+    return json(response, 404, { error: "音乐会话或封面已更新", code });
+  }
+  if (code?.startsWith("ERR_SMTC_")) {
+    return json(response, 503, { error: "暂时无法读取音乐信息", code });
+  }
   if (error instanceof ValidationError) return json(response, 400, { error: error.message });
   if (error instanceof ConflictError) return json(response, 409, { error: error.message });
   if (error instanceof ProfileConflictError) return json(response, 409, { error: error.message });
