@@ -33,6 +33,7 @@
 1. 人工检查两张新截图，确认文字没有截断、界面没有异常，并且内容符合上一节规范。
 2. 再次运行 `npm run verify`。
 3. 运行 `npm pack --dry-run`，确认发布包只包含预期文件且版本正确。
+   包中必须包含 `native/index.cjs`、`native/index.d.cts`、`dist/native/monitor.cjs` 及 `prebuilds/win32-x64/*.node`。本地先运行 `npm run package:native` 和 `npm run test:package:native`；Release 工作流从 Windows 构建与 Node 20/22/24/26 验证任务取得同一份预编译产物，缺失时不得发布。
 4. 检查最终差异，确认版本号、代码、测试、文档和两张截图属于同一次发布。
 
 ## 4. 提交与发布

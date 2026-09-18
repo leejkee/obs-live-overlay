@@ -1,6 +1,11 @@
 node_modules/
 dist/
+build/
+prebuilds/
 *.log
 data/*.json
 data/*.tmp
 *.tgz
+tmp/
+.vscode/
+.clangd

@@ -98,6 +98,28 @@ export async function runCli(args: string[] = process.argv.slice(2)): Promise<vo
     return;
   }
 
+  if (command === "music") {
+    const options = parseCliOptions(args.slice(1), { ...process.env, PORT: process.env.MUSIC_PORT || "3001" });
+    const { createMusicServer } = await import("./music-server.js");
+    const music = await createMusicServer();
+    try {
+      await new Promise<void>((resolve, reject) => {
+        music.server.once("error", reject);
+        music.server.listen(options.port, options.host, () => { music.server.off("error", reject); resolve(); });
+      });
+    } catch (error) { await music.close(); throw error; }
+    console.log(`音乐 Overlay：http://${options.host}:${options.port}/overlay/music`);
+    console.log("只读观察模式；在播放器中切歌。按 Ctrl+C 停止音乐服务。");
+    const shutdown = () => {
+      void music.close().then(() => {
+        process.off("SIGINT", shutdown); process.off("SIGTERM", shutdown);
+        console.log("音乐服务已停止");
+      }).catch(error => { console.error(error); process.exitCode = 1; });
+    };
+    process.once("SIGINT", shutdown); process.once("SIGTERM", shutdown);
+    return;
+  }
+
   const options = parseCliOptions(args);
   const { server, sockets } = await createOverlayServer({
     dataFile: options.dataFile,
@@ -158,6 +180,9 @@ function helpText(): string {
 用法：
   obs-live-overlay [选项]
   obs-live-overlay <命令>
+
+音乐（Windows 10 1809+ / Windows 11 x64）：
+  music [--port 3001]   独立启动只读音乐 Overlay（MUSIC_PORT 可设置默认端口）
 
 命令（Windows 11）：
   startup-enable        启用登录后静默启动，并立即启动服务
