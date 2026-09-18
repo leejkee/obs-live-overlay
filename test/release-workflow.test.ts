@@ -26,4 +26,18 @@ describe("Release workflow", () => {
     assert.match(releaseRules, /监听端口/);
     assert.match(releaseRules, /npm run verify/);
   });
+
+  it("CI/CD 只验证 Node.js 24 和 26", async () => {
+    const [ciWorkflow, nativeWorkflow, releaseRules] = await Promise.all([
+      readFile(".github/workflows/ci.yml", "utf8"),
+      readFile(".github/workflows/native.yml", "utf8"),
+      readFile("RELEASE.md", "utf8"),
+    ]);
+    assert.doesNotMatch(ciWorkflow, /node-version:\s*(20|22)\b/);
+    assert.match(ciWorkflow, /node-version:\s*24\b/);
+    assert.match(ciWorkflow, /node-version:\s*26\b/);
+    assert.match(nativeWorkflow, /node-version:\s*\[24, 26\]/);
+    assert.doesNotMatch(nativeWorkflow, /node-version:\s*(20|22)\b/);
+    assert.match(releaseRules, /Node 24\/26/);
+  });
 });

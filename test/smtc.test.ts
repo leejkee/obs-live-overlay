@@ -163,8 +163,16 @@ test('SMTC 读取失败后的封面请求可以重试，空封面返回 null', a
 });
 test('SMTC 已排队的时间线切换超时后不执行', async t => {
   const f = fixture({ timeoutMs: 40, requests: 128, events: 256 }); t.after(() => f.monitor.stop()); await ready(f); f.held.add('track');
+  let now = 0;
+  t.mock.method(performance, 'now', () => now);
+  t.mock.timers.enable({ apis: ['setTimeout'] });
   const first = assert.rejects(f.monitor.setTimelineTracking('s1'), { code: 'ERR_SMTC_TIMEOUT' });
+  await settle();
+  assert.equal(f.requests.filter(r => r.op === 'track').length, 1);
   const second = assert.rejects(f.monitor.setTimelineTracking(null), { code: 'ERR_SMTC_TIMEOUT' });
+  // Expire both deadlines before releasing the first request's queue slot.
+  now = 41;
+  t.mock.timers.tick(41);
   await Promise.all([first, second]); await settle();
   assert.equal(f.requests.filter(r => r.op === 'track').length, 1);
 });
