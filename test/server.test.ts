@@ -67,8 +67,12 @@ describe("Overlay Service", () => {
     assert.match(overlayScript, /queueHeading\.classList\.toggle\("stopped", isQueueStopped\)/);
     const controlScript = await (await fetch(`${baseUrl}/control.js`)).text();
     assert.match(controlScript, /data-text-color/);
-    assert.match(controlScript, /class="inline-control-groups"/);
-    assert.match(controlScript, /type="checkbox" data-outline-enabled/);
+    const editorResponse = await fetch(`${baseUrl}/typography-editor.js`);
+    assert.equal(editorResponse.status, 200);
+    const editorScript = await editorResponse.text();
+    assert.match(controlScript, /typographyEditorMarkup/);
+    assert.match(editorScript, /class="inline-control-groups"/);
+    assert.match(editorScript, /type="checkbox" data-outline-enabled/);
     assert.match(controlScript, /data-outline-color/);
     assert.match(controlScript, /data-outline-width/);
     assert.doesNotMatch(controlScript, /data-format="italic"|style\.italic/);

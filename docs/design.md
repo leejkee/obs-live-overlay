@@ -77,7 +77,7 @@ Overlay 页面保持透明背景，适合作为 OBS Browser Source 直接叠加�
 
 默认数据保存在用户应用数据目录，也可通过 `--data-file` 指定路径。Profile 写操作在进程内串行执行，写盘采用“临时文件写入 → 重命名替换”，降低并发覆盖和写入中断造成文件损坏的风险。
 
-服务默认只监听 `127.0.0.1:3000`。Windows 静默启动使用当前用户计划任务拉起隐藏进程；普通运行则由 CLI 捕获退出信号，关闭 HTTP 和 WebSocket 连接后结束进程。
+统一 CLI 默认只监听 `127.0.0.1:3000`。主 HTTP 服务通过 `/overlay/queue` 与 `/overlay/music` 提供两个 Overlay，并在 `/control` 提供统一控制台。Windows 静默启动使用当前用户计划任务拉起同一进程；普通运行则由 CLI 捕获退出信号，一起关闭 HTTP 服务、WebSocket 连接和媒体监控后结束进程。
 
 ## 设计边界
 
@@ -85,3 +85,9 @@ Overlay 页面保持透明背景，适合作为 OBS Browser Source 直接叠加�
 - 服务端内存状态是运行时真相，JSON 文件用于重启恢复，不作为外部实时数据库。
 - Overlay 只负责展示，不直接修改业务状态。
 - 新功能应优先扩展现有状态、REST 更新和 WebSocket 全量广播链路，避免引入第二套同步机制。
+
+## 音乐功能边界
+
+音乐模块只观察播放器：读取和订阅歌曲、播放状态、时间线及封面。播放、暂停、切歌和跳转进度由 QQ 音乐等播放器本体完成，控制台与 Overlay 均不提供反向控制播放器的接口。`Monitor.start()` / `stop()` 管理监控生命周期，`setTimelineTracking()` 选择订阅的时间线，均不改变播放器状态。`src/music-service.ts` 只管理观察者、音乐状态、封面读取和配置；`src/server.ts` 将它们暴露为同一端口下的页面与只读数据接口。音乐配置不与队列 Profile 混用状态。
+
+音乐控制项合并在 `/control`，由侧边栏切换页面。`src/music-settings.ts` 保存总开关、四个模块开关和两组字体设置；`PATCH /api/overlays/music/settings` 串行应用配置及监控生命周期变化，并原子替换配置文件。关闭只停止观察者，统一 HTTP 控制台持续运行。Overlay 与预览每秒读取 `/api/music/state`，按配置隐藏模块和应用样式。队列与音乐共享 `public/typography-editor.js` 的字体编辑器模板和 `normalizeTextStyle` 校验规则。

@@ -4,6 +4,7 @@ import { readFileSync, realpathSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createMusicService } from "./music-service.js";
 import { createOverlayServer } from "./server.js";
 import {
   disableStartup,
@@ -19,6 +20,7 @@ export interface CliOptions {
   host: string;
   port: number;
   dataFile: string;
+  musicSettingsFile: string;
   startupToken?: string;
 }
 
@@ -35,11 +37,19 @@ export function defaultDataFile(
   return join(baseDirectory || homedir(), "obs-live-overlay", "profiles.json");
 }
 
+export function defaultMusicSettingsFile(
+  environment: NodeJS.ProcessEnv = process.env,
+  platform: NodeJS.Platform = process.platform,
+): string {
+  return join(dirname(defaultDataFile(environment, platform)), "music.json");
+}
+
 export function parseCliOptions(args: string[], environment: NodeJS.ProcessEnv = process.env): CliOptions {
   const options: CliOptions = {
     host: environment.HOST || "127.0.0.1",
     port: parsePort(environment.PORT || "3000"),
     dataFile: resolve(environment.OBS_OVERLAY_DATA_FILE || defaultDataFile(environment)),
+    musicSettingsFile: resolve(environment.MUSIC_SETTINGS_FILE || defaultMusicSettingsFile(environment)),
   };
 
   for (let index = 0; index < args.length; index += 1) {
@@ -50,6 +60,8 @@ export function parseCliOptions(args: string[], environment: NodeJS.ProcessEnv =
     else if (argument.startsWith("--port=")) options.port = parsePort(argument.slice("--port=".length));
     else if (argument === "--data-file") options.dataFile = resolve(requiredValue(args, ++index, "--data-file"));
     else if (argument.startsWith("--data-file=")) options.dataFile = resolve(argument.slice("--data-file=".length));
+    else if (argument === "--music-settings-file") options.musicSettingsFile = resolve(requiredValue(args, ++index, "--music-settings-file"));
+    else if (argument.startsWith("--music-settings-file=")) options.musicSettingsFile = resolve(argument.slice("--music-settings-file=".length));
     else if (argument === "--startup-token") options.startupToken = startupToken(requiredValue(args, ++index, "--startup-token"));
     else throw new CliArgumentError(`未知参数：${argument}`);
   }
@@ -99,24 +111,16 @@ export async function runCli(args: string[] = process.argv.slice(2)): Promise<vo
   }
 
   const options = parseCliOptions(args);
-  const { server, sockets } = await createOverlayServer({
-    dataFile: options.dataFile,
-    shutdownToken: options.startupToken,
-  });
-  await new Promise<void>((resolveListen, reject) => {
-    server.once("error", reject);
-    server.listen(options.port, options.host, () => {
-      server.off("error", reject);
-      resolveListen();
-    });
-  });
+  const app = await startOverlayServices(options);
 
   const baseUrl = `http://${options.host}:${options.port}`;
   console.log("OBS Live Overlay 已启动");
-  console.log(`控制台：${baseUrl}/control`);
-  console.log(`OBS Overlay：${baseUrl}/overlay/queue`);
-  console.log(`数据文件：${options.dataFile}`);
-  console.log("按 Ctrl+C 停止服务");
+  console.log(`统一控制台：${baseUrl}/control`);
+  console.log(`队列 Overlay：${baseUrl}/overlay/queue`);
+  console.log(`音乐 Overlay：${baseUrl}/overlay/music`);
+  console.log(`队列数据：${options.dataFile}`);
+  console.log(`音乐配置：${options.musicSettingsFile}`);
+  console.log("按 Ctrl+C 停止 Overlay 服务");
 
   let isShuttingDown = false;
   const shutdown = async () => {
@@ -124,18 +128,65 @@ export async function runCli(args: string[] = process.argv.slice(2)): Promise<vo
     isShuttingDown = true;
     process.off("SIGINT", handleSignal);
     process.off("SIGTERM", handleSignal);
-    server.off("shutdownRequested", handleSignal);
+    app.queue.server.off("shutdownRequested", handleSignal);
     console.log("\n正在停止 OBS Live Overlay…");
-    for (const socket of sockets.clients) socket.terminate();
-    await new Promise<void>((resolveClose) => server.close(() => resolveClose()));
-    sockets.close();
-    console.log("服务已停止");
+    await app.close();
+    console.log("Overlay 服务已停止");
     process.exit(0);
   };
   const handleSignal = () => { void shutdown(); };
   process.once("SIGINT", handleSignal);
   process.once("SIGTERM", handleSignal);
-  server.once("shutdownRequested", handleSignal);
+  app.queue.server.once("shutdownRequested", handleSignal);
+}
+
+export async function startOverlayServices(
+  options: CliOptions,
+  dependencies = { createOverlayServer, createMusicService },
+) {
+  let music: Awaited<ReturnType<typeof createMusicService>> | undefined;
+  let queue: Awaited<ReturnType<typeof createOverlayServer>> | undefined;
+  let closing: Promise<void> | undefined;
+  const closeQueue = async () => {
+    const app = queue;
+    if (!app) return;
+    for (const socket of app.sockets.clients) socket.terminate();
+    app.sockets.close();
+    app.server.closeAllConnections();
+    if (app.server.listening) await new Promise<void>(resolveClose => app.server.close(() => resolveClose()));
+  };
+  const close = () => closing ??= Promise.all([closeQueue(), music?.close()]).then(() => undefined);
+  try {
+    const baseUrl = `http://${options.host}:${options.port}`;
+    music = await dependencies.createMusicService(undefined, {
+      settingsFile: options.musicSettingsFile,
+    });
+    queue = await dependencies.createOverlayServer({
+      dataFile: options.dataFile,
+      shutdownToken: options.startupToken,
+      music: {
+        snapshot: music.snapshot,
+        update: music.update,
+        getThumbnail: music.getThumbnail,
+        overlayUrl: `${baseUrl}/overlay/music`,
+      },
+    });
+    await listen(queue.server, options.port, options.host);
+  } catch (error) {
+    await close();
+    throw error;
+  }
+  return { queue, music, close };
+}
+
+function listen(server: import("node:http").Server, port: number, host: string): Promise<void> {
+  return new Promise((resolveListen, reject) => {
+    server.once("error", reject);
+    server.listen(port, host, () => {
+      server.off("error", reject);
+      resolveListen();
+    });
+  });
 }
 
 function parsePort(value: string): number {
@@ -168,6 +219,7 @@ function helpText(): string {
   -p, --port <端口>       HTTP 服务端口，默认 3000
       --host <地址>       监听地址，默认 127.0.0.1
       --data-file <路径>  Profile JSON 数据文件
+      --music-settings-file <路径>  音乐配置 JSON 文件
   -v, --version           显示版本
   -h, --help              显示帮助
 `;

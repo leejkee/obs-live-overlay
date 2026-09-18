@@ -15,6 +15,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  native:
+    name: Windows SMTC 预编译与兼容性
+    uses: ./.github/workflows/native.yml
+
   verify:
     name: Node.js ${{ matrix.node-version }} / ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
@@ -49,6 +53,10 @@ jobs:
 
       - name: 校验、测试并构建
         run: npm run verify
+
+      - name: 验证非 Windows 原生入口错误
+        if: runner.os != 'Windows'
+        run: node --test test/native/runtime.test.cjs
 
       - name: 验证发布包内容
         if: matrix.os == 'ubuntu-latest' && matrix.node-version == 24

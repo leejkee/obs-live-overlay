@@ -16,9 +16,12 @@ describe("Release workflow", () => {
     const releaseRules = await readFile("RELEASE.md", "utf8");
     assert.match(releaseRules, /docs\/images\/control-console\.png/);
     assert.match(releaseRules, /docs\/images\/queue-overlay\.png/);
+    assert.match(releaseRules, /docs\/images\/music-overlay\.png/);
     assert.match(releaseRules, /用户 1/);
     assert.match(releaseRules, /等待队列/);
     assert.match(releaseRules, /弹幕发送排队加入队列/);
+    assert.match(releaseRules, /示例歌曲/);
+    assert.match(releaseRules, /示例歌手/);
     assert.match(releaseRules, /Node\.js 进程/);
     assert.match(releaseRules, /监听端口/);
     assert.match(releaseRules, /npm run verify/);

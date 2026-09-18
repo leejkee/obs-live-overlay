@@ -14,7 +14,12 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  native:
+    name: 构建与验证 Windows SMTC
+    uses: ./.github/workflows/native.yml
+
   release:
+    needs: native
     name: 构建并发布 ${{ github.ref_name }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -55,6 +60,12 @@ jobs:
 
       - name: 校验、测试并构建
         run: npm run verify
+
+      - name: 取得已验证的 Windows 原生产物
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: smtc-win32-x64
+          path: prebuilds/win32-x64
 
       - name: 生成并验证发布产物
         shell: bash

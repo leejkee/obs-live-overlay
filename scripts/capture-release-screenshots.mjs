@@ -6,10 +6,43 @@ import { fileURLToPath } from "node:url";
 import { once } from "node:events";
 import { spawn } from "node:child_process";
 import { createOverlayServer } from "../dist/server.js";
+import { defaultMusicSettings } from "../dist/music-settings.js";
 
 const projectDirectory = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const temporaryDirectory = await mkdtemp(join(tmpdir(), "obs-live-overlay-release-"));
-const app = await createOverlayServer({ dataFile: join(temporaryDirectory, "profiles.json") });
+const musicSnapshot = () => ({
+  settings: defaultMusicSettings(),
+  running: true,
+  monitorError: null,
+  session: {
+    sessionId: "release-music",
+    sourceAppUserModelId: "QQMusic.exe",
+    media: {
+      title: "示例歌曲",
+      subtitle: "",
+      artist: "示例歌手",
+      albumTitle: "示例专辑",
+      albumArtist: "",
+      genres: [],
+      trackNumber: 1,
+      albumTrackCount: 1,
+      thumbnailId: null,
+    },
+    playback: { status: "playing", playbackRate: 1 },
+    timeline: null,
+    revisions: { media: 1, playback: 1, timeline: 0 },
+  },
+  coverUrl: null,
+});
+const app = await createOverlayServer({
+  dataFile: join(temporaryDirectory, "profiles.json"),
+  music: {
+    snapshot: musicSnapshot,
+    update: async () => musicSnapshot(),
+    getThumbnail: async () => null,
+    overlayUrl: "/overlay/music",
+  },
+});
 let chrome;
 
 try {
@@ -74,6 +107,22 @@ try {
   assert.match(overlayState.current, /当前上号/);
   await overlay.screenshot(join(projectDirectory, "docs", "images", "queue-overlay.png"));
   await overlay.close();
+
+  const musicOverlay = await openPage(debug.httpUrl, `${baseUrl}/overlay/music`, 660, 210);
+  const musicState = await musicOverlay.evaluate(`new Promise((resolve) => {
+    const check = () => {
+      const card = document.querySelector(".music-card");
+      const ready = card && !card.hidden
+        && document.querySelector("#status")?.textContent === "正在播放"
+        && document.querySelector("#title")?.textContent === "示例歌曲"
+        && document.querySelector("#artist")?.textContent === "示例歌手 - 示例歌曲";
+      ready ? resolve({ title: document.querySelector("#title")?.textContent }) : setTimeout(check, 50);
+    };
+    check();
+  })`, true);
+  assert.equal(musicState.title, "示例歌曲");
+  await musicOverlay.screenshot(join(projectDirectory, "docs", "images", "music-overlay.png"));
+  await musicOverlay.close();
 } finally {
   for (const client of app.sockets.clients) client.terminate();
   if (app.server.listening) {

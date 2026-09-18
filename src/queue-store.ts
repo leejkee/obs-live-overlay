@@ -242,7 +242,7 @@ function normalizeContentValue(value: unknown): string {
   return content;
 }
 
-function normalizeTextStyle(value: unknown, fallback: TextStyle): TextStyle {
+export function normalizeTextStyle(value: unknown, fallback: TextStyle): TextStyle {
   if (value === undefined) return { ...fallback };
   if (!isRecord(value)) throw new ValidationError("字体样式格式无效");
   const fontFamily = value.fontFamily ?? fallback.fontFamily;
