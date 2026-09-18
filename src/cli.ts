@@ -99,15 +99,17 @@ export async function runCli(args: string[] = process.argv.slice(2)): Promise<vo
   }
 
   if (command === "music") {
-    const options = parseCliOptions(args.slice(1), { ...process.env, PORT: process.env.MUSIC_PORT || "3001" });
+    const options = parseCliOptions(args.slice(1), { ...process.env, PORT: process.env.MUSIC_PORT || "3001", OBS_OVERLAY_DATA_FILE: process.env.MUSIC_SETTINGS_FILE || join(dirname(defaultDataFile()), "music.json") });
     const { createMusicServer } = await import("./music-server.js");
-    const music = await createMusicServer();
+    const music = await createMusicServer(undefined, { settingsFile: options.dataFile });
     try {
       await new Promise<void>((resolve, reject) => {
         music.server.once("error", reject);
         music.server.listen(options.port, options.host, () => { music.server.off("error", reject); resolve(); });
       });
     } catch (error) { await music.close(); throw error; }
+    console.log(`音乐控制台：http://${options.host}:${options.port}/control`);
+    console.log(`音乐配置：${options.dataFile}`);
     console.log(`音乐 Overlay：http://${options.host}:${options.port}/overlay/music`);
     console.log("只读观察模式；在播放器中切歌。按 Ctrl+C 停止音乐服务。");
     const shutdown = () => {

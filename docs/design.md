@@ -89,3 +89,5 @@ Overlay 页面保持透明背景，适合作为 OBS Browser Source 直接叠加�
 ## 音乐功能边界
 
 音乐模块只观察播放器：读取和订阅歌曲、播放状态、时间线及封面。播放、暂停、切歌和跳转进度由 QQ 音乐等播放器本体完成，控制台与 Overlay 均不提供反向控制播放器的接口。`Monitor.start()` / `stop()` 管理监控生命周期，`setTimelineTracking()` 选择订阅的时间线，均不改变播放器状态。音乐观察模块通过 `src/music-server.ts` 接入独立端口的 `/overlay/music` 页面，使用 `music` 命令启动；不与队列 Profile 混用状态。
+
+音乐控制台由同一独立端口的 `/control` 提供。`src/music-settings.ts` 保存总开关、四个模块开关和两组字体设置；`PATCH /api/music/settings` 串行应用配置及监控生命周期变化，并原子替换配置文件。关闭只停止观察者，HTTP 控制台持续运行。Overlay 与预览每秒读取 `/api/music/state`，按配置隐藏模块和应用样式。队列与音乐共享 `public/typography-editor.js` 的字体编辑器模板和 `normalizeTextStyle` 校验规则。

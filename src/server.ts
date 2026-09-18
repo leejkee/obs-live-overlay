@@ -164,6 +164,7 @@ export async function createOverlayServer(options: { dataFile?: string; shutdown
     if (url.pathname === `/overlay/${overlayId}` || url.pathname === `/overlay/${overlayId}/`) {
       return serveFile(response, "overlay.html", method === "HEAD");
     }
+    if (url.pathname === "/typography-editor.js") return serveFile(response, "typography-editor.js", method === "HEAD");
     if (/^\/(control|overlay)\.(js|css)$/.test(url.pathname)) {
       return serveFile(response, url.pathname.slice(1), method === "HEAD");
     }

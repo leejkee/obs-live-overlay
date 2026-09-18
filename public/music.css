@@ -6,10 +6,10 @@ body { padding: 16px; font-family: "Microsoft YaHei", system-ui, sans-serif; col
 .art span { font-size: 60px; color: #a5b4c9; }
 .art img { position: absolute; width: 100%; height: 100%; object-fit: cover; }
 [hidden] { display: none !important; }
-.details { min-width: 0; }
+.details { min-width: 0; flex: 1; }
 .eyebrow { display: flex; align-items: center; gap: 8px; color: #b7c6da; font-size: 12px; letter-spacing: 2px; }
 .dot { width: 6px; height: 6px; border-radius: 50%; background: #91a3b8; }
 body[data-status="playing"] .dot { background: #86efac; box-shadow: 0 0 10px #86efac55; }
 h1 { margin: 10px 0 7px; font-size: 25px; line-height: 1.35; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 p { margin: 0; font-size: 16px; color: #d0d6df; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-#album { margin-top: 6px; font-size: 12px; color: #8f9aae; }
+.music-card.cover-only { width: fit-content; }
