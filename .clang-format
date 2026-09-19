@@ -1,5 +1,18 @@
 BasedOnStyle: LLVM
+
 IndentWidth: 4
 ContinuationIndentWidth: 4
 TabWidth: 4
 UseTab: Never
+
+# 所有控制语句使用花括号
+InsertBraces: true
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+
+# 不把短函数/代码块强行压缩到一行
+AllowShortFunctionsOnASingleLine: None
+AllowShortBlocksOnASingleLine: Never
+
+# LLVM / K&R 风格的大括号位置
+BreakBeforeBraces: Attach
