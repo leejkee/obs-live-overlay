@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   native:
-    name: Windows SMTC 预编译与兼容性
+    name: CMake 原生构建与兼容性
     uses: ./.github/workflows/native.yml
 
   verify:

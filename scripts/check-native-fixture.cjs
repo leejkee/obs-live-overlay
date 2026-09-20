@@ -8,7 +8,7 @@ const { spawn } = require('node:child_process');
 const { once } = require('node:events');
 const { setTimeout: delay } = require('node:timers/promises');
 const { createMonitor } = require('../native/index.cjs');
-const executable = path.resolve(__dirname, '../build/Release/smtc_fixture.exe');
+const executable = path.resolve(__dirname, '../build/native/Release/smtc_fixture.exe');
 assert.ok(fs.existsSync(executable), '先运行 npm run build:native:fixture');
 const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'smtc-fixture-'));
 const audio = path.join(temporary, 'silence.wav');

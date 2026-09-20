@@ -98,10 +98,11 @@ Promise 方法的参数错误通过 reject 返回；factory 的使用错误同�
 
 ## 构建、测试与交付
 
-开发需要 Python 3、Visual Studio 2022 C++ 工具和 Windows SDK。使用 Node-API v8、node-addon-api、C++20、node-gyp、windowsapp.lib，不依赖 vcpkg 或参考项目的桌面程序。
+开发需要 Visual Studio 2022 C++ 工具、包含 C++/WinRT 的 Windows SDK、CMake 3.24+ 和 Ninja（也可使用 VS 自带的 Ninja）。CMake.js 作为项目本地开发依赖安装，不需要全局安装；开发 Node.js 需满足 CMake.js 8 的版本要求（20.17+ 的 Node 20，或 22.9+）。在普通 PowerShell / CMD 中运行下列命令，无需开发者终端或执行 `vcvars64.bat`。使用 Node-API v8、node-addon-api、C++20 和 windowsapp.lib，不依赖 Python 或 vcpkg。
 
 ```sh
 npm ci
+npm run configure:native
 npm run build:native
 npm run verify
 npm run test:native
@@ -112,9 +113,17 @@ npm run package:native
 npm run test:package:native
 ```
 
-`build` 只构建 TypeScript；原生构建必须显式执行。`package:native` 生成 `prebuilds/win32-x64`，普通安装只加载随包二进制，不调用编译工具、不自动下载。非 Windows 可安装并运行原有队列服务。
+`configure:native` 只配置 CMake，并生成 `build/native/compile_commands.json` 供 clangd 使用。`build:native` 将 SMTC 实现编译为静态库 `smtc_lib`，再链接生成 `build/native/Release/smtc-addon.node`；开发入口优先加载该文件。`build` 只构建 TypeScript；原生构建必须显式执行。
 
-CI 使用一份预编译二进制在 Node 20/22/24/26 上验证加载、启停、自然退出、GC 和 Worker terminate；没有媒体服务的 CI 允许明确的 manager 不可用错误，但不能当作真实媒体读取验收。`check-native.cjs` 必须在实际 Windows 用户环境运行，检查媒体、播放状态、时间线和封面，仅输出数量。当前默认测试不改变用户播放器状态。
+`CMakeLists.txt` 在 `project()` 前默认选择 `cmake/toolchains/msvc-x64.cmake`，因此 CMake.js 不需要读取 Presets。工具链通过 `vswhere` 定位 VS，通过注册表定位 SDK，并选择完整的 SDK 版本；编译器、资源工具、系统头文件和库搜索路径写入构建规则，独立启动的 Ninja 和 clangd 不依赖终端环境。可使用 `npm run configure:native -- --CDWINSDK_VERSION=10.0.26100.0` 指定 SDK；也支持 `SMTC_VS_ROOT` 和 `WINSDK_ROOT` 路径覆盖。
+
+从旧构建配置迁移、或更换 VS / SDK 后，先执行一次 `npm run configure:native -- -- --fresh`，再执行 `npm run build:native`，重新探测工具链。其他构建目录（例如 `build/native-prebuild`）也需要在对应的 CMake.js configure 命令后追加 `-- --fresh`。这会刷新 CMake 配置缓存，不修改源码。
+
+CMake.js 首次配置时下载并缓存完整 Node SDK；本模块使用 `uv.h` 和 libuv API，因此不启用仅含 Node-API 头文件的模式。`package:native` 在独立的 `build/native-prebuild` 目录使用 Node 20.0.0 SDK 构建，成功后复制到 `prebuilds/win32-x64`。保留 `node-gyp-build` 作为预编译二进制加载器，它不参与编译。普通安装只加载随包二进制，不调用编译工具、不自动下载；`PREBUILDS_ONLY=1` 跳过本地构建。非 Windows 可安装并运行原有队列服务。
+
+CI 和 Release 共用 `.github/workflows/native.yml`：运行 `configure:native:prebuild`，由项目本地 CMake.js 准备 Node SDK 并配置 Ninja / MSVC，再用 `cmake --build` 构建 `smtc_lib` 和 `smtc-addon`，最后整理、上传预编译产物。Release 下载同一份已验证产物，不在 Linux 发布任务中重新编译 Windows addon。
+
+CI 使用一份预编译二进制在 Node 24/26 上验证加载、启停、自然退出、GC 和 Worker terminate；没有媒体服务的 CI 允许明确的 manager 不可用错误，但不能当作真实媒体读取验收。`check-native.cjs` 必须在实际 Windows 用户环境运行，检查媒体、播放状态、时间线和封面，仅输出数量。当前默认测试不改变用户播放器状态。
 
 接口测试使用可控的 TypeScript fake transport 注入过期结果、错误、超时和通知压力；原生生命周期通过真实二进制子进程测试。`test:media:native` 启动独立的静音测试播放器，通过测试播放器自身的输入通道模拟暂停、播放、切歌和进度变化，Monitor 仅观察具有本次随机标题的测试会话，验证媒体、播放、时间线事件、退出后的旧 ID 失效及超过 4 MiB 的实际封面流被拒绝，并清理播放器和临时媒体；不控制用户正在使用的播放器。fixture 只通过 `build:native:fixture` 显式构建，不进入发布包。
 

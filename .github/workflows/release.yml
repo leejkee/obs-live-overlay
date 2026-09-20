@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   native:
-    name: 构建与验证 Windows SMTC
+    name: CMake 原生构建与发布前验证
     uses: ./.github/workflows/native.yml
 
   release:
