@@ -1,4 +1,4 @@
-name: Windows SMTC
+name: Windows SMTC / CMake
 
 on:
   workflow_call:
@@ -8,6 +8,7 @@ permissions:
 
 jobs:
   build:
+    name: CMake / Ninja / MSVC x64
     runs-on: windows-2022
     timeout-minutes: 15
     steps:
@@ -17,8 +18,14 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci --prefer-offline --no-audit --no-fund
-      - name: 构建 Windows x64 Node-API v8 产物
-        run: npm run package:native
+      - name: 检查 CMake
+        run: cmake --version
+      - name: 使用本地 CMake.js 配置 Node 20 SDK 与 MSVC 工具链
+        run: npm run configure:native:prebuild
+      - name: 使用 CMake 构建 smtc_lib 与 smtc-addon
+        run: cmake --build build/native-prebuild --config Release --target smtc-addon
+      - name: 整理 Windows x64 Node-API v8 预编译产物
+        run: node scripts/package-native.cjs
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: smtc-win32-x64

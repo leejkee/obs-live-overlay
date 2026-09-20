@@ -121,6 +121,8 @@ npm run test:package:native
 
 CMake.js 首次配置时下载并缓存完整 Node SDK；本模块使用 `uv.h` 和 libuv API，因此不启用仅含 Node-API 头文件的模式。`package:native` 在独立的 `build/native-prebuild` 目录使用 Node 20.0.0 SDK 构建，成功后复制到 `prebuilds/win32-x64`。保留 `node-gyp-build` 作为预编译二进制加载器，它不参与编译。普通安装只加载随包二进制，不调用编译工具、不自动下载；`PREBUILDS_ONLY=1` 跳过本地构建。非 Windows 可安装并运行原有队列服务。
 
+CI 和 Release 共用 `.github/workflows/native.yml`：运行 `configure:native:prebuild`，由项目本地 CMake.js 准备 Node SDK 并配置 Ninja / MSVC，再用 `cmake --build` 构建 `smtc_lib` 和 `smtc-addon`，最后整理、上传预编译产物。Release 下载同一份已验证产物，不在 Linux 发布任务中重新编译 Windows addon。
+
 CI 使用一份预编译二进制在 Node 24/26 上验证加载、启停、自然退出、GC 和 Worker terminate；没有媒体服务的 CI 允许明确的 manager 不可用错误，但不能当作真实媒体读取验收。`check-native.cjs` 必须在实际 Windows 用户环境运行，检查媒体、播放状态、时间线和封面，仅输出数量。当前默认测试不改变用户播放器状态。
 
 接口测试使用可控的 TypeScript fake transport 注入过期结果、错误、超时和通知压力；原生生命周期通过真实二进制子进程测试。`test:media:native` 启动独立的静音测试播放器，通过测试播放器自身的输入通道模拟暂停、播放、切歌和进度变化，Monitor 仅观察具有本次随机标题的测试会话，验证媒体、播放、时间线事件、退出后的旧 ID 失效及超过 4 MiB 的实际封面流被拒绝，并清理播放器和临时媒体；不控制用户正在使用的播放器。fixture 只通过 `build:native:fixture` 显式构建，不进入发布包。
