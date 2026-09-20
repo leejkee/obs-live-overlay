@@ -1,6 +1,6 @@
 {
   "name": "@leejkee/obs-live-overlay",
-  "version": "0.7.0-beta.0",
+  "version": "0.7.0",
   "description": "由本地控制台管理、用于 OBS Browser Source 的 Overlay 工具",
   "type": "module",
   "exports": {
