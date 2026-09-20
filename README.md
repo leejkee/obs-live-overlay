@@ -119,3 +119,7 @@ npm start
 - **编辑字体**：为两行文字分别设置字体、字号、加粗、对齐、颜色和描边，复用队列字体编辑器，修改自动保存，约一秒内同步到预览和 OBS。
 
 首次启动默认启用，后续启动恢复保存的开关与样式。Windows 默认配置文件为 `%LOCALAPPDATA%\obs-live-overlay\music.json`，可用 `MUSIC_SETTINGS_FILE` 或 `npm start -- --music-settings-file <音乐配置路径>` 指定，与队列 Profile 独立。开启失败时控制台显示错误，可关闭后重新开启；关闭后的画面完全透明。
+
+## 致谢
+
+感谢 [qq-music-lyrics-displayer](https://github.com/H0308/qq-music-lyrics-displayer) 为本项目提供实现思路参考。
